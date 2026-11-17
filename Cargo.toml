@@ -46,7 +46,7 @@ thiserror = "2.0"
 clap = { version = "4.6", features = ["derive"], optional = true }
 
 [dev-dependencies]
-similar = { version = "2.7", default-features = false, features = ["text"] }
+similar = { version = "3.2", default-features = false, features = ["text"] }
 
 [lints.rust]
 missing_docs = "warn"
