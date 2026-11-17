@@ -1,0 +1,23 @@
+{
+  "upstream": "api/filters/imagetag/legacy_test.go",
+  "cases": [
+    {
+      "name": "updates multiple images inside containers",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  containers:\n  - image: nginx:1.2.1\n  - image: nginx:2.1.2\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  containers:\n  - image: apache@12345\n  - image: apache@12345\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: LegacyFilter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"apache\",\nDigest:  \"12345\",\n},\n},"
+    },
+    {
+      "name": "updates inside both containers and initContainers",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  containers:\n  - image: nginx:1.2.1\n  - image: tomcat:1.2.3\n  initContainers:\n  - image: nginx:1.2.1\n  - image: apache:1.2.3\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  containers:\n  - image: apache:3.2.1\n  - image: tomcat:1.2.3\n  initContainers:\n  - image: apache:3.2.1\n  - image: apache:1.2.3\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: LegacyFilter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"apache\",\nNewTag:  \"3.2.1\",\n},\n},"
+    },
+    {
+      "name": "updates on multiple depths",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  containers:\n  - image: nginx:1.2.1\n  - image: tomcat:1.2.3\n  template:\n    spec: \n      initContainers:\n      - image: nginx:1.2.1\n      - image: apache:1.2.3\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  containers:\n  - image: apache:3.2.1\n  - image: tomcat:1.2.3\n  template:\n    spec:\n      initContainers:\n      - image: apache:3.2.1\n      - image: apache:1.2.3\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: LegacyFilter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"apache\",\nNewTag:  \"3.2.1\",\n},\n},"
+    }
+  ]
+}

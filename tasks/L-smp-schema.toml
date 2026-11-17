@@ -1,0 +1,30 @@
+id = "L-smp-schema"
+title = "Strategic-merge schema table from the Kubernetes OpenAPI"
+status = "done"
+owner = "lead"
+difficulty = 3
+order = 30
+depends_on = ["L-framework"]
+summary = '''
+Strategic merge patch needs, for each field, its merge key, patch strategy and list type. kustomize embeds the Kubernetes v1.21.2 schema. Write a Go exporter (`scripts/upstream/dump_openapi_test.go`, run by import-upstream.sh) that writes a compact JSON table: GVK -> definition, and per definition only the fields that carry `x-kubernetes-patch-merge-key`, `x-kubernetes-patch-strategy`, `x-kubernetes-list-type`/`list-map-keys`, or a `$ref`/items ref leading to one. Add `src/openapi.rs` with a lookup API: `schema_for(gvk) -> Option<Node>`, `node.field(name)`, `node.items()`, `node.merge_key()`, `node.strategy()`.
+'''
+notes = '''
+Keep the table small (it's embedded with include_str!). Add a README in its data dir with provenance, as for builtin_config. NOTICE needs a line for it. This task may edit scripts/ and NOTICE; it's a lead task.
+'''
+
+[context]
+upstream = [
+  "kustomize:kyaml/openapi/openapi.go#ResourceSchema,SchemaForResourceType,Field,Elements,PatchStrategyAndKeyList,PatchStrategyAndKey,Lookup"
+]
+read = ["src/resource.rs"]
+cases = ["multiplepatch/"]
+max_examples = 2
+budget = 12000
+
+[scope]
+write = ["src/openapi.rs", "src/openapi/**", "src/lib.rs", "scripts/upstream/**", "scripts/import-upstream.sh", "NOTICE"]
+
+[accept]
+tests = ["openapi::"]
+cases = []
+min_new_passes = 0

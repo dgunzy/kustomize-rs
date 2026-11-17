@@ -1,0 +1,59 @@
+{
+  "upstream": "api/filters/namespace/namespace_test.go",
+  "cases": [
+    {
+      "name": "add",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  name: instance\n",
+      "expected": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  namespace: foo\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  name: instance\n  namespace: foo\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: namespace.Filter{Namespace: \"foo\"},"
+    },
+    {
+      "name": "null_ns",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  namespace: null\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  name: instance\n  namespace: null\n",
+      "expected": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  namespace: foo\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  name: instance\n  namespace: foo\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: namespace.Filter{Namespace: \"foo\"},"
+    },
+    {
+      "name": "add-recurse",
+      "input": "apiVersion: example.com/v1\nkind: Foo\n---\napiVersion: example.com/v1\nkind: Bar\n",
+      "expected": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  namespace: foo\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  namespace: foo\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: namespace.Filter{Namespace: \"foo\"},"
+    },
+    {
+      "name": "update",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  # update this namespace\n  namespace: bar\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  name: instance\n  namespace: bar\n",
+      "expected": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  # update this namespace\n  namespace: foo\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  name: instance\n  namespace: foo\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: namespace.Filter{Namespace: \"foo\"},"
+    },
+    {
+      "name": "update-rolebinding",
+      "input": "apiVersion: example.com/v1\nkind: RoleBinding\nsubjects:\n- name: default\n---\napiVersion: example.com/v1\nkind: RoleBinding\nsubjects:\n- name: default\n  namespace: foo\n---\napiVersion: example.com/v1\nkind: RoleBinding\nsubjects:\n- name: something\n---\napiVersion: example.com/v1\nkind: RoleBinding\nsubjects:\n- name: something\n  namespace: foo\n",
+      "expected": "apiVersion: example.com/v1\nkind: RoleBinding\nsubjects:\n- name: default\n  namespace: bar\nmetadata:\n  namespace: bar\n---\napiVersion: example.com/v1\nkind: RoleBinding\nsubjects:\n- name: default\n  namespace: bar\nmetadata:\n  namespace: bar\n---\napiVersion: example.com/v1\nkind: RoleBinding\nsubjects:\n- name: something\nmetadata:\n  namespace: bar\n---\napiVersion: example.com/v1\nkind: RoleBinding\nsubjects:\n- name: something\n  namespace: foo\nmetadata:\n  namespace: bar\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: namespace.Filter{Namespace: \"bar\"},"
+    },
+    {
+      "name": "update-clusterrolebinding",
+      "input": "apiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRoleBinding\nsubjects:\n- name: default\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRoleBinding\nsubjects:\n- name: default\n  namespace: foo\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRoleBinding\nsubjects:\n- name: something\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRoleBinding\nsubjects:\n- name: something\n  namespace: foo\n",
+      "expected": "apiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRoleBinding\nsubjects:\n- name: default\n  namespace: bar\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRoleBinding\nsubjects:\n- name: default\n  namespace: bar\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRoleBinding\nsubjects:\n- name: something\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRoleBinding\nsubjects:\n- name: something\n  namespace: foo\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: namespace.Filter{Namespace: \"bar\"},"
+    },
+    {
+      "name": "data-fieldspecs",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  name: instance\n",
+      "expected": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  namespace: foo\na:\n  b:\n    c: foo\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  name: instance\n  namespace: foo\na:\n  b:\n    c: foo\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: namespace.Filter{Namespace: \"foo\"},\nfsslice: []types.FieldSpec{\n{\nPath:               \"a/b/c\",\nCreateIfNotPresent: true,\n},\n},"
+    },
+    {
+      "name": "mutation tracker",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n---\napiVersion: example.com/v1\nkind: RoleBinding\nsubjects:\n- name: default\n",
+      "expected": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  namespace: bar\na:\n  b:\n    c: bar\n---\napiVersion: example.com/v1\nkind: RoleBinding\nsubjects:\n- name: default\n  namespace: bar\nmetadata:\n  namespace: bar\na:\n  b:\n    c: bar\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: namespace.Filter{Namespace: \"bar\"},\nfsslice: []types.FieldSpec{\n{\nPath:               \"a/b/c\",\nCreateIfNotPresent: true,\n},\n},\nmutationTracker: mutationTrackerStub.MutationTracker,\nexpectedSetValueArgs: []filtertest_test.SetValueArg{\n{\nValue:    \"bar\",\nTag:      \"!!str\",\nNodePath: []string{\"metadata\", \"namespace\"},\n},\n{\nValue:    \"bar\",\nTag:      \"!!str\",\nNodePath: []string{\"a\", \"b\", \"c\"},\n},\n{\nValue:    \"bar\",\nTag:      \"!!str\",\nNodePath: []string{\"metadata\", \"namespace\"},\n},\n{\nValue:    \"bar\",\nTag:      \"!!str\",\nNodePath: []string{\"namespace\"},\n},\n{\nValue:    \"bar\",\nTag:      \"!!str\",\nNodePath: []string{\"a\", \"b\", \"c\"},\n},\n},"
+    },
+    {
+      "name": "numeric",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  name: instance\n",
+      "expected": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  namespace: \"01234\"\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  name: instance\n  namespace: \"01234\"\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: namespace.Filter{Namespace: \"01234\"},"
+    }
+  ]
+}

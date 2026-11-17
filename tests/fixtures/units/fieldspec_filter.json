@@ -1,0 +1,176 @@
+{
+  "upstream": "api/filters/fieldspec/fieldspec_test.go",
+  "cases": [
+    {
+      "name": "path not found",
+      "fieldSpec": "path: a/b\ngroup: foo\nkind: Bar\n",
+      "input": "apiVersion: foo\nkind: Bar\nxxx:\n",
+      "expected": "apiVersion: foo\nkind: Bar\nxxx:\n",
+      "setScalar": "e"
+    },
+    {
+      "name": "empty path",
+      "fieldSpec": "group: foo\nversion: v1\nkind: Bar\n",
+      "input": "apiVersion: foo/v1\nkind: Bar\nxxx:\n",
+      "expected": "apiVersion: foo\nkind: Bar\nxxx:\n",
+      "error": "considering field '' of object Bar.v1.foo/[noName].[noNs]: cannot set or create an empty field name",
+      "setScalar": "e"
+    },
+    {
+      "name": "update",
+      "fieldSpec": "path: a/b\ngroup: foo\nkind: Bar\n",
+      "input": "apiVersion: foo/v1beta1\nkind: Bar\na:\n  b: c\n",
+      "expected": "apiVersion: foo/v1beta1\nkind: Bar\na:\n  b: e\n",
+      "setScalar": "e"
+    },
+    {
+      "name": "update-kind-not-match",
+      "fieldSpec": "path: a/b\ngroup: foo\nkind: Bar1\n",
+      "input": "apiVersion: foo/v1beta1\nkind: Bar2\na:\n  b: c\n",
+      "expected": "apiVersion: foo/v1beta1\nkind: Bar2\na:\n  b: c\n",
+      "setScalar": "e"
+    },
+    {
+      "name": "update-group-not-match",
+      "fieldSpec": "path: a/b\ngroup: foo1\nkind: Bar\n",
+      "input": "apiVersion: foo2/v1beta1\nkind: Bar\na:\n  b: c\n",
+      "expected": "apiVersion: foo2/v1beta1\nkind: Bar\na:\n  b: c\n",
+      "setScalar": "e"
+    },
+    {
+      "name": "update-version-not-match",
+      "fieldSpec": "path: a/b\ngroup: foo\nversion: v1beta1\nkind: Bar\n",
+      "input": "apiVersion: foo/v1beta2\nkind: Bar\na:\n  b: c\n",
+      "expected": "apiVersion: foo/v1beta2\nkind: Bar\na:\n  b: c\n",
+      "setScalar": "e"
+    },
+    {
+      "name": "bad-version",
+      "fieldSpec": "path: a/b\ngroup: foo\nversion: v1beta1\nkind: Bar\n",
+      "input": "apiVersion: foo/v1beta2/something\nkind: Bar\na:\n  b: c\n",
+      "expected": "apiVersion: foo/v1beta2/something\nkind: Bar\na:\n  b: c\n",
+      "setScalar": "e"
+    },
+    {
+      "name": "bad-meta",
+      "fieldSpec": "path: a/b\ngroup: foo\nversion: v1beta1\nkind: Bar\n",
+      "input": "a:\n  b: c\n",
+      "expected": "a:\n  b: c\n",
+      "setScalar": "e"
+    },
+    {
+      "name": "miss-match-type",
+      "fieldSpec": "path: a/b/c\nkind: Bar\n",
+      "input": "kind: Bar\na:\n  b: a\n",
+      "error": "considering field 'a/b/c' of object Bar.[noVer].[noGrp]/[noName].[noNs]: expected sequence or mapping node",
+      "setScalar": "e"
+    },
+    {
+      "name": "add",
+      "fieldSpec": "path: a/b/c/d\ngroup: foo\ncreate: true\nkind: Bar\n",
+      "input": "apiVersion: foo/v1beta1\nkind: Bar\na: {}\n",
+      "expected": "apiVersion: foo/v1beta1\nkind: Bar\na: {b: {c: {d: e}}}\n",
+      "setScalar": "e",
+      "createKind": "scalar"
+    },
+    {
+      "name": "update-in-sequence",
+      "fieldSpec": "path: a/b[]/c/d\ngroup: foo\nkind: Bar\n",
+      "input": "apiVersion: foo/v1beta1\nkind: Bar\na:\n  b:\n  - c:\n      d: a\n",
+      "expected": "apiVersion: foo/v1beta1\nkind: Bar\na:\n  b:\n  - c:\n      d: e\n",
+      "setScalar": "e"
+    },
+    {
+      "name": "empty-sequence-no-create",
+      "fieldSpec": "path: a/b[]/c/d\ngroup: foo\ncreate: true\nkind: Bar\n",
+      "input": "apiVersion: foo/v1beta1\nkind: Bar\na: {}\n",
+      "expected": "apiVersion: foo/v1beta1\nkind: Bar\na: {}\n",
+      "setScalar": "e",
+      "createKind": "scalar"
+    },
+    {
+      "name": "empty-sequence-create",
+      "fieldSpec": "path: a/b[]/c/d\ngroup: foo\ncreate: true\nkind: Bar\n",
+      "input": "apiVersion: foo/v1beta1\nkind: Bar\na:\n  b:\n  - c: {}\n",
+      "expected": "apiVersion: foo/v1beta1\nkind: Bar\na:\n  b:\n  - c: {d: e}\n",
+      "setScalar": "e",
+      "createKind": "scalar"
+    },
+    {
+      "name": "group v1",
+      "fieldSpec": "path: a/b\ngroup: v1\ncreate: true\nkind: Bar\n",
+      "input": "apiVersion: v1\nkind: Bar\n",
+      "expected": "apiVersion: v1\nkind: Bar\n",
+      "setScalar": "e",
+      "createKind": "scalar"
+    },
+    {
+      "name": "version v1",
+      "fieldSpec": "path: a/b\nversion: v1\ncreate: true\nkind: Bar\n",
+      "input": "apiVersion: v1\nkind: Bar\n",
+      "expected": "apiVersion: v1\nkind: Bar\na:\n  b: e\n",
+      "setScalar": "e",
+      "createKind": "scalar"
+    },
+    {
+      "name": "successfully set field on array entry no sequence hint",
+      "fieldSpec": "path: spec/containers/image\nversion: v1\nkind: Bar\n",
+      "input": "apiVersion: v1\nkind: Bar\nspec:\n  containers:\n  - image: foo\n",
+      "expected": "apiVersion: v1\nkind: Bar\nspec:\n  containers:\n  - image: bar\n",
+      "setScalar": "bar",
+      "createKind": "scalar"
+    },
+    {
+      "name": "successfully set field on array entry with sequence hint",
+      "fieldSpec": "path: spec/containers[]/image\nversion: v1\nkind: Bar\n",
+      "input": "apiVersion: v1\nkind: Bar\nspec:\n  containers:\n  - image: foo\n",
+      "expected": "apiVersion: v1\nkind: Bar\nspec:\n  containers:\n  - image: bar\n",
+      "setScalar": "bar",
+      "createKind": "scalar"
+    },
+    {
+      "name": "failure to set field on array entry with sequence hint in path",
+      "fieldSpec": "path: spec/containers[]/image\nversion: v1\nkind: Bar\n",
+      "input": "apiVersion: v1\nkind: Bar\nspec:\n  containers:\n",
+      "expected": "apiVersion: v1\nkind: Bar\nspec:\n  containers: []\n",
+      "setScalar": "bar",
+      "createKind": "scalar"
+    },
+    {
+      "name": "failure to set field on array entry, no sequence hint in path",
+      "fieldSpec": "path: spec/containers/image\nversion: v1\nkind: Bar\n",
+      "input": "apiVersion: v1\nkind: Bar\nspec:\n  containers:\n",
+      "expected": "apiVersion: v1\nkind: Bar\nspec:\n  containers:\n",
+      "setScalar": "bar",
+      "createKind": "scalar"
+    },
+    {
+      "name": "fieldname with slash '/'",
+      "fieldSpec": "path: a/b\\/c/d\nversion: v1\nkind: Bar\n",
+      "input": "apiVersion: v1\nkind: Bar\na:\n  b/c:\n    d: foo\n",
+      "expected": "apiVersion: v1\nkind: Bar\na:\n  b/c:\n    d: bar\n",
+      "setScalar": "bar",
+      "createKind": "scalar"
+    },
+    {
+      "name": "fieldname with multiple '/'",
+      "fieldSpec": "path: a/b\\/c/d\\/e/f\nversion: v1\nkind: Bar\n",
+      "input": "apiVersion: v1\nkind: Bar\na:\n  b/c:\n    d/e:\n      f: foo\n",
+      "expected": "apiVersion: v1\nkind: Bar\na:\n  b/c:\n    d/e:\n      f: bar\n",
+      "setScalar": "bar",
+      "createKind": "scalar"
+    },
+    {
+      "name": "fieldpath containing SequenceNode",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: app\nspec:\n  containers:\n  - name: store\n    image: redis:6.2.6\n  - name: server\n    image: nginx:latest\n",
+      "fieldSpec": "path: spec/containers[]/image\nkind: Pod\n",
+      "unsupported": "filter shape not understood"
+    },
+    {
+      "name": "fieldpath with MappingNode",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: app\nspec:\n  containers:\n  - name: store\n    image: redis:6.2.6\n  - name: server\n    image: nginx:latest\n",
+      "fieldSpec": "path: metadata/name\nkind: Pod\n",
+      "unsupported": "filter shape not understood"
+    }
+  ]
+}

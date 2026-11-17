@@ -1,0 +1,30 @@
+id = "W-labels"
+title = "commonLabels and labels"
+status = "todo"
+owner = "worker"
+difficulty = 3
+order = 140
+depends_on = ["L-fieldspec"]
+summary = '''
+Implement `commonLabels` (labels plus selectors, via `commonlabels.yaml`) and `labels` entries with `includeSelectors`/`includeTemplates`/`fields`. Label values are set as strings and label maps rewritten sorted, like annotations.
+'''
+
+[context]
+upstream = [
+  "kustomize:api/filters/labels/labels.go",
+  "kustomize:api/internal/builtins/LabelTransformer.go",
+  "kustomize:api/types/labels.go"
+]
+read = ["src/fieldspec.rs", "src/transformers/mod.rs", "src/resource.rs", "src/setters.rs", "src/config.rs"]
+units = ["labels_filter"]
+cases = ["inlinelabels/", "numericcommonlabels/"]
+max_examples = 2
+budget = 14000
+
+[scope]
+write = ["src/transformers/labels.rs", "src/transformers/mod.rs", "src/kustomization.rs", "src/build.rs"]
+
+[accept]
+tests = ["transformers::labels::", "upstream_labels"]
+cases = []
+min_new_passes = 2

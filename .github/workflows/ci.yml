@@ -29,7 +29,9 @@ jobs:
       - name: Cache cargo
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          # ~/.cargo/bin keeps the installed cargo-audit between runs.
           path: |
+            ~/.cargo/bin/
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
@@ -78,10 +80,11 @@ jobs:
       - name: Check on MSRV
         run: cargo check --all-targets --all-features
 
-  # Progress report against upstream kustomize's own test cases. Informational:
-  # it never fails the build. The score lands in the job summary.
+  # Progress against upstream kustomize's own test cases. Not a required check, so
+  # it never blocks a merge. It goes red only if a case in conformance/baseline.txt
+  # stopped passing (the ratchet), which is worth a look before merging.
   conformance:
-    name: Conformance (report only)
+    name: Conformance (report + ratchet)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -92,7 +95,8 @@ jobs:
           toolchain: stable
 
       - name: Run conformance
-        run: cargo test --test conformance
+        run: cargo test --test conformance -- --check-regressions
 
       - name: Publish report
+        if: always()
         run: cat conformance/STATUS.md >> "$GITHUB_STEP_SUMMARY"

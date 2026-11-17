@@ -1,0 +1,35 @@
+id = "L-smp-merge"
+title = "Strategic merge core (kyaml merge2 + walk)"
+status = "done"
+owner = "lead"
+difficulty = 5
+order = 40
+depends_on = ["L-fieldspec", "L-smp-schema"]
+summary = '''
+Port kyaml's schema-aware merge to `src/smp.rs`: `merge(dest, patch, schema) -> Result<Value>`. Maps merge recursively; a null in the patch deletes the field; associative lists (merge key from the schema) merge by key; non-associative lists replace; scalars replace. `$patch: delete|replace|merge` is part of the core (merge2's determineSmpDirective). kyaml implements no other directive, so `$retainKeys`, `$setElementOrder` and `$deleteFromPrimitiveList` pass through as plain fields.
+'''
+notes = '''
+walk.Walker drives merge2.Merger via visitors. Port the decision logic, not the visitor plumbing. Table-test each walk/* file's cases. Unknown kinds (CRDs) fall back to no merge keys, i.e. lists replace, exactly as upstream.
+'''
+
+[context]
+upstream = [
+  "kustomize:kyaml/yaml/merge2/merge2.go",
+  "kustomize:kyaml/yaml/walk/walk.go",
+  "kustomize:kyaml/yaml/walk/map.go",
+  "kustomize:kyaml/yaml/walk/associative_sequence.go",
+  "kustomize:kyaml/yaml/walk/nonassociative_sequence.go",
+  "kustomize:kyaml/yaml/walk/scalar.go"
+]
+read = ["src/openapi.rs"]
+cases = ["multiplepatch/", "mergeenvfrom/"]
+max_examples = 2
+budget = 20000
+
+[scope]
+write = ["src/smp.rs", "src/lib.rs", "src/setters.rs"]
+
+[accept]
+tests = ["smp::"]
+cases = []
+min_new_passes = 0

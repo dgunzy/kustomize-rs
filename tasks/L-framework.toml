@@ -1,0 +1,32 @@
+id = "L-framework"
+title = "Transformer framework, build state and stage wiring"
+status = "done"
+owner = "lead"
+difficulty = 4
+order = 10
+depends_on = []
+summary = '''
+Lay the structure every feature plugs into. Add a `Transformer` trait (`fn transform(&self, m: &mut ResMap) -> Result<()>`) in `src/transformers/mod.rs`, mutable access on `ResMap` (iter_mut, replace, remove, find by current/original id) and value helpers on `Resource` (get/set at a path, name, namespace, labels, annotations). Keep build state as `Resource` fields, never annotations: original id, previous ids (rename lineage), generator behavior, needs-hash-suffix. Load the transformer config (field-spec tables) from `src/builtin_config/*.yaml` with `include_str!`. Restructure `build.rs` into the stages SPEC.md section 3 lists, in upstream order, so a later task fills one stage without touching the others.
+'''
+notes = '''
+Shape the API so W- tasks only add a file in src/transformers/ plus one line of wiring. Each stage still returns Unsupported for kustomization fields it doesn't implement. Write a short doc comment on the trait explaining how to add a transformer; worker briefs show it.
+'''
+
+[context]
+upstream = [
+  "kustomize:api/internal/target/kusttarget.go#accumulateTarget,runTransformers,configureBuiltinTransformers",
+  "kustomize:api/resource/resource.go#Resource,OrgId,PrevIds,CurId",
+  "kustomize:api/internal/accumulator/resaccumulator.go#ResAccumulator,Transform"
+]
+read = ["src/build.rs", "src/resource.rs", "src/kustomization.rs"]
+cases = ["simple/"]
+max_examples = 2
+budget = 16000
+
+[scope]
+write = ["src/**"]
+
+[accept]
+tests = ["transformers::"]
+cases = []
+min_new_passes = 0

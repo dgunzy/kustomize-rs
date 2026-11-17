@@ -1,0 +1,29 @@
+id = "W-json6902"
+title = "JSON 6902 patches (patchesJson6902 and patches)"
+status = "todo"
+owner = "worker"
+difficulty = 3
+order = 160
+depends_on = ["W-selector"]
+summary = '''
+Implement JSON 6902 patches: `patchesJson6902` (target + path or inline patch) and `patches` entries whose content is a JSON/YAML op list. Use the `json-patch` crate if suitable (it may be added by this task: Cargo.toml is in scope).
+'''
+
+[context]
+upstream = [
+  "kustomize:api/filters/patchjson6902/patchjson6902.go",
+  "kustomize:api/internal/builtins/PatchTransformer.go#Transform,transformJson,jsonPatchFromBytes",
+  "kustomize:api/internal/builtins/PatchJson6902Transformer.go"
+]
+read = ["src/selector.rs", "src/transformers/mod.rs", "src/resource.rs", "src/fieldspec.rs", "src/setters.rs", "src/config.rs"]
+cases = ["gvknpatch/", "inlinepatch/"]
+max_examples = 2
+budget = 14000
+
+[scope]
+write = ["src/transformers/json6902.rs", "src/transformers/mod.rs", "src/kustomization.rs", "src/build.rs", "Cargo.toml", "Cargo.lock"]
+
+[accept]
+tests = ["transformers::json6902::"]
+cases = []
+min_new_passes = 1

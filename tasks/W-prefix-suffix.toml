@@ -1,0 +1,30 @@
+id = "W-prefix-suffix"
+title = "namePrefix / nameSuffix"
+status = "todo"
+owner = "worker"
+difficulty = 2
+order = 135
+depends_on = ["L-fieldspec"]
+summary = '''
+Implement `namePrefix` and `nameSuffix`: apply at the `nameprefix.yaml`/`namesuffix.yaml` field specs, record the rename in the resource's lineage (previous ids) so name references can follow it, and skip what upstream skips (CRDs, Namespaces, the `kustomize.config.k8s.io/...` opt-outs).
+'''
+
+[context]
+upstream = [
+  "kustomize:api/filters/prefix/prefix.go",
+  "kustomize:api/filters/suffix/suffix.go",
+  "kustomize:api/internal/builtins/PrefixTransformer.go",
+  "kustomize:api/internal/builtins/SuffixTransformer.go"
+]
+read = ["src/fieldspec.rs", "src/transformers/mod.rs", "src/resource.rs", "src/setters.rs", "src/config.rs"]
+cases = ["basereusenameprefix/", "disablenamesuffix/", "legacyprefixsuffixtransformer/"]
+max_examples = 2
+budget = 14000
+
+[scope]
+write = ["src/transformers/prefix_suffix.rs", "src/transformers/mod.rs", "src/kustomization.rs", "src/build.rs"]
+
+[accept]
+tests = ["transformers::prefix_suffix::"]
+cases = []
+min_new_passes = 1

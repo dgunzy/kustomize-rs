@@ -1,0 +1,33 @@
+id = "W-metadata-strings"
+title = "Annotations end up as sorted string maps"
+status = "todo"
+owner = "worker"
+difficulty = 2
+order = 110
+depends_on = ["L-framework"]
+summary = '''
+At the end of a build kustomize rewrites every non-empty `metadata.annotations` map: values become strings (`8080` -> `"8080"`, `true` -> `"true"`) and keys are sorted. Do the same as a final build step.
+'''
+notes = '''
+Use `Resource::annotations()` + `Resource::set_annotations()` (they already produce
+sorted string maps) in the `emit` stage of src/build.rs.
+Only when the annotations map is non-empty. Labels are only rewritten when a transformer sets them; that's the label task's job.
+'''
+
+[context]
+upstream = [
+  "kustomize:api/resource/resource.go#RemoveBuildAnnotations",
+  "kustomize:kyaml/yaml/rnode.go#setMapInMetadata,SortedMapKeys"
+]
+read = ["src/resource.rs"]
+cases = ["basic_io/"]
+max_examples = 2
+budget = 9000
+
+[scope]
+write = ["src/build.rs", "src/resource.rs"]
+
+[accept]
+tests = ["annotation"]
+cases = ["basic_io/"]
+min_new_passes = 1

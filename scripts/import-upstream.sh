@@ -4,6 +4,7 @@
 #   tests/fixtures/krusty/   one directory per krusty test run (input tree,
 #                            case.yaml, expected.yaml or expected-error.txt)
 #   src/builtin_config/      kustomize's default field-spec tables
+#   src/schema/              schema-derived tables (namespace scope, ...)
 #
 # The fixtures are recorded by running upstream's own Go test suite with a small
 # recorder hooked into its test harness (scripts/upstream/), so expected output
@@ -27,6 +28,8 @@ cp "$repo_root/scripts/upstream/record.go" "$harness/record.go"
 git -C "$work/kustomize" apply "$repo_root/scripts/upstream/harness.patch"
 cp "$repo_root/scripts/upstream/dump_fieldspecs_test.go" \
   "$work/kustomize/api/internal/konfig/builtinpluginconsts/zz_dump_test.go"
+cp "$repo_root/scripts/upstream/dump_openapi_test.go" \
+  "$work/kustomize/kyaml/openapi/zz_dump_test.go"
 
 out="$work/fixtures"
 mkdir -p "$out"
@@ -43,6 +46,12 @@ echo "$commit" >"$fixtures/UPSTREAM_COMMIT"
 config="$repo_root/src/builtin_config"
 rm -f "$config"/*.yaml
 (cd "$work/kustomize/api/internal/konfig/builtinpluginconsts" && KRS_DUMP_DIR="$config" go test -run TestDumpForKustomizeRs -count=1 . >/dev/null)
+
+schema="$repo_root/src/schema"
+rm -f "$schema"/*.json
+(cd "$work/kustomize/kyaml/openapi" && KRS_DUMP_DIR="$schema" go test -run TestDump -count=1 . >/dev/null)
+
+python3 "$repo_root/scripts/upstream/extract_filter_tables.py" "$work/kustomize" "$repo_root/tests/fixtures/units"
 
 echo "imported $(find "$fixtures" -name case.yaml | wc -l | tr -d ' ') cases from kustomize $commit"
 echo "next: just conformance   (refreshes conformance/STATUS.md)"

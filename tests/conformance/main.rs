@@ -1,14 +1,20 @@
 //! Runs the recorded upstream kustomize cases (tests/fixtures/krusty) against
 //! this crate and reports how many pass.
 //!
-//! This is a progress report, not a gate: it exits 0 however many cases fail,
-//! unless `--strict` is given. Without a filter it rewrites
-//! `conformance/STATUS.md`.
+//! This is a progress report, not a merge gate: it exits 0 however many cases
+//! fail. Without a filter it rewrites `conformance/STATUS.md`.
 //!
 //! ```text
-//! cargo test --test conformance                      # full run, update STATUS.md
-//! cargo test --test conformance -- namereference -v  # matching cases, with diffs
+//! cargo test --test conformance                        # full run, update STATUS.md
+//! cargo test --test conformance -- namereference -v    # matching cases, with diffs
+//! cargo test --test conformance -- --json out.json     # machine-readable results
+//! cargo test --test conformance -- --check-regressions # exit 2 if a baseline case stopped passing
+//! cargo test --test conformance -- --write-baseline    # record today's passing cases
 //! ```
+//!
+//! The baseline (`conformance/baseline.txt`) is the ratchet: case ids that
+//! passed when it was last written. A change may add passes, never lose one.
+//! The delegation tooling (`tools/krs.py`) uses it to reject regressions.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -65,6 +71,10 @@ struct Args {
     filter: Option<String>,
     verbose: bool,
     strict: bool,
+    json: Option<PathBuf>,
+    check_regressions: bool,
+    write_baseline: bool,
+    no_status: bool,
 }
 
 fn parse_args() -> Args {
@@ -72,16 +82,36 @@ fn parse_args() -> Args {
         filter: None,
         verbose: false,
         strict: false,
+        json: None,
+        check_regressions: false,
+        write_baseline: false,
+        no_status: false,
     };
-    for arg in std::env::args().skip(1) {
+    let mut it = std::env::args().skip(1);
+    while let Some(arg) = it.next() {
         match arg.as_str() {
             "-v" | "--verbose" => args.verbose = true,
             "--strict" => args.strict = true,
+            "--json" => args.json = it.next().map(PathBuf::from),
+            "--check-regressions" => args.check_regressions = true,
+            "--write-baseline" => args.write_baseline = true,
+            "--no-status" => args.no_status = true,
             a if a.starts_with('-') => {} // ignore flags cargo may pass through
             a => args.filter = Some(a.to_string()),
         }
     }
     args
+}
+
+/// Case ids in the baseline file (one per line, `#` comments allowed).
+fn read_baseline(path: &Path) -> Vec<String> {
+    std::fs::read_to_string(path)
+        .unwrap_or_default()
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .map(String::from)
+        .collect()
 }
 
 fn find_cases(dir: &Path, out: &mut Vec<PathBuf>) {
@@ -200,7 +230,12 @@ struct Tally {
 
 fn main() {
     let args = parse_args();
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    // Runtime value first: cargo sets it when it runs the test, so a binary reused
+    // from another checkout still reads this tree's fixtures.
+    let root_buf = std::env::var_os("CARGO_MANIFEST_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")));
+    let root = root_buf.as_path();
     let fixtures = root.join("tests/fixtures/krusty");
     let deferred: Deferred =
         yaml::from_str(&std::fs::read_to_string(root.join("conformance/deferred.yaml")).unwrap())
@@ -220,6 +255,8 @@ fn main() {
     let mut blocked: BTreeMap<String, usize> = BTreeMap::new();
     let mut failures = Vec::new();
     let mut deferred_reasons: BTreeMap<String, usize> = BTreeMap::new();
+    // (id, outcome, detail) for --json and the baseline.
+    let mut results: Vec<(String, &str, String)> = Vec::new();
 
     for dir in &dirs {
         let id = dir
@@ -236,7 +273,15 @@ fn main() {
         }
         let group = id.split('/').next().unwrap_or_default().to_string();
         let tally = groups.entry(group).or_default();
-        match run_case(dir, &id, &deferred.deferred, args.verbose) {
+        let outcome = run_case(dir, &id, &deferred.deferred, args.verbose);
+        let (kind, detail) = match &outcome {
+            Outcome::Pass => ("pass", String::new()),
+            Outcome::Fail(why) => ("fail", why.lines().next().unwrap_or_default().to_string()),
+            Outcome::Unsupported(feature) => ("unimplemented", feature.clone()),
+            Outcome::Deferred(reason) => ("deferred", reason.clone()),
+        };
+        results.push((id.clone(), kind, detail));
+        match outcome {
             Outcome::Pass => {
                 tally.pass += 1;
                 total.pass += 1;
@@ -280,7 +325,86 @@ fn main() {
     );
     println!("\n{headline}");
 
-    if args.filter.is_none() {
+    if let Some(path) = &args.json {
+        let cases: Vec<_> = results
+            .iter()
+            .map(|(id, outcome, detail)| serde_json::json!({"id": id, "outcome": outcome, "detail": detail}))
+            .collect();
+        let report = serde_json::json!({
+            "upstreamCommit": commit.trim(),
+            "filter": args.filter,
+            "summary": {
+                "pass": total.pass,
+                "fail": total.fail,
+                "unimplemented": total.unsupported,
+                "deferred": total.deferred,
+                "inScope": in_scope,
+            },
+            "unimplementedFeatures": blocked,
+            "cases": cases,
+        });
+        std::fs::write(path, serde_json::to_string_pretty(&report).unwrap()).unwrap();
+        println!("wrote {}", path.display());
+    }
+
+    let baseline_path = root.join("conformance/baseline.txt");
+    let mut regressed = false;
+    if args.check_regressions {
+        let outcome_of: BTreeMap<&str, &str> = results
+            .iter()
+            .map(|(id, outcome, _)| (id.as_str(), *outcome))
+            .collect();
+        let baseline = read_baseline(&baseline_path);
+        let mut lost = Vec::new();
+        for id in &baseline {
+            if args
+                .filter
+                .as_ref()
+                .is_some_and(|f| !id.contains(f.as_str()))
+            {
+                continue;
+            }
+            match outcome_of.get(id.as_str()) {
+                Some(&"pass") => {}
+                Some(other) => lost.push(format!("{id} ({other})")),
+                None => lost.push(format!("{id} (missing)")),
+            }
+        }
+        let gained = results
+            .iter()
+            .filter(|(id, outcome, _)| *outcome == "pass" && !baseline.contains(id))
+            .count();
+        if lost.is_empty() {
+            println!("no regressions against the baseline; {gained} newly passing");
+        } else {
+            regressed = true;
+            println!("REGRESSIONS: {} baseline cases no longer pass:", lost.len());
+            for l in &lost {
+                println!("  {l}");
+            }
+        }
+    }
+
+    if args.write_baseline {
+        if args.filter.is_some() {
+            println!("--write-baseline ignored: needs a full run (no filter)");
+        } else {
+            let mut out = String::from(
+                "# Conformance ratchet: cases that pass. Written by `just baseline`; do not edit.\n\
+                 # A change may add cases here, never lose one (`just regressions`).\n",
+            );
+            for (id, outcome, _) in &results {
+                if *outcome == "pass" {
+                    out.push_str(id);
+                    out.push('\n');
+                }
+            }
+            std::fs::write(&baseline_path, out).unwrap();
+            println!("wrote conformance/baseline.txt ({} cases)", total.pass);
+        }
+    }
+
+    if args.filter.is_none() && !args.no_status {
         let mut out = String::new();
         let _ = writeln!(out, "# Conformance status\n");
         let _ = writeln!(
@@ -327,6 +451,9 @@ fn main() {
         println!("wrote conformance/STATUS.md");
     }
 
+    if regressed {
+        std::process::exit(2);
+    }
     if args.strict && total.pass != in_scope {
         std::process::exit(1);
     }

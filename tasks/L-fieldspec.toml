@@ -1,0 +1,35 @@
+id = "L-fieldspec"
+title = "Field specs: path walking, create, GVK match, setters"
+status = "done"
+owner = "lead"
+difficulty = 4
+order = 20
+depends_on = ["L-framework"]
+summary = '''
+The data types (`FieldSpec`, merging, `TransformerConfig` in src/config.rs) exist since L-framework.
+Add the engine to `src/fieldspec.rs`: parsing of paths like `spec/template/metadata/labels` (implicit traversal of sequences, escaped `\/`), GVK matching (empty parts match anything), and applying a setter function at every matching location, creating missing maps when `create` is set. Also the transformer config type that merges the builtin tables with `configurations` later. Every builtin transformer becomes 'apply this setter at these field specs'.
+'''
+notes = '''
+Port handleMap/handleSequence/isSequenceField exactly; the sequence-vs-map decisions are where bugs hide. filtersutil's SetScalar/SetEntry decide whether to create; keep their semantics.
+'''
+
+[context]
+upstream = [
+  "kustomize:api/filters/fieldspec/fieldspec.go",
+  "kustomize:api/filters/fsslice/fsslice.go",
+  "kustomize:api/filters/filtersutil/setters.go",
+  "kustomize:api/types/fieldspec.go#FieldSpec,FsSlice,MergeAll,MergeOne",
+  "kustomize:kyaml/resid/gvk.go#Gvk,IsSelected"
+]
+read = ["src/resource.rs", "src/transformers/mod.rs"]
+cases = ["inlinelabels/", "namespaces/"]
+max_examples = 2
+budget = 16000
+
+[scope]
+write = ["src/fieldspec.rs", "src/setters.rs", "src/lib.rs", "src/transformers/mod.rs", "src/resource.rs"]
+
+[accept]
+tests = ["fieldspec::"]
+cases = []
+min_new_passes = 0

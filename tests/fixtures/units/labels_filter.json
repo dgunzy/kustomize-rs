@@ -1,0 +1,65 @@
+{
+  "upstream": "api/filters/labels/labels_test.go",
+  "cases": [
+    {
+      "name": "add",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    hero: batman\n    fiend: riddler\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    hero: batman\n    fiend: riddler\n    auto: ford\n    bean: cannellini\n    clown: emmett kelley\n    dragon: smaug\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nLabels: labelMap{\n\"clown\":  \"emmett kelley\",\n\"auto\":   \"ford\",\n\"dragon\": \"smaug\",\n\"bean\":   \"cannellini\",\n},\nFsSlice: []types.FieldSpec{\n{\nPath:               \"metadata/labels\",\nCreateIfNotPresent: true,\n},\n},\n},"
+    },
+    {
+      "name": "update",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    hero: batman\n    fiend: riddler\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    hero: superman\n    fiend: luthor\n    bean: cannellini\n    clown: emmett kelley\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nLabels: labelMap{\n\"clown\": \"emmett kelley\",\n\"hero\":  \"superman\",\n\"fiend\": \"luthor\",\n\"bean\":  \"cannellini\",\n}, FsSlice: []types.FieldSpec{\n{\nPath:               \"metadata/labels\",\nCreateIfNotPresent: true,\n},\n},\n},"
+    },
+    {
+      "name": "data-fieldspecs",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  name: instance\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    sleater: kinney\na:\n  b:\n    sleater: kinney\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  name: instance\n  labels:\n    sleater: kinney\na:\n  b:\n    sleater: kinney\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nLabels: labelMap{\n\"sleater\": \"kinney\",\n},\nFsSlice: []types.FieldSpec{\n{\nPath:               \"metadata/labels\",\nCreateIfNotPresent: true,\n},\n{\nPath:               \"a/b\",\nCreateIfNotPresent: true,\n},\n},\n},"
+    },
+    {
+      "name": "fieldSpecWithKind",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n---\napiVersion: example.com/v2\nkind: Bar\nmetadata:\n  name: instance\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    cheese: cheddar\n---\napiVersion: example.com/v2\nkind: Bar\nmetadata:\n  name: instance\n  labels:\n    cheese: cheddar\na:\n  b:\n    cheese: cheddar\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nLabels: labelMap{\n\"cheese\": \"cheddar\",\n},\nFsSlice: []types.FieldSpec{\n{\nPath:               \"metadata/labels\",\nCreateIfNotPresent: true,\n},\n{\nGvk: resid.Gvk{\nKind: \"Bar\",\n},\nPath:               \"a/b\",\nCreateIfNotPresent: true,\n},\n},\n},"
+    },
+    {
+      "name": "fieldSpecWithVersion",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n---\napiVersion: example.com/v2\nkind: Bar\nmetadata:\n  name: instance\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    cheese: cheddar\na:\n  b:\n    cheese: cheddar\n---\napiVersion: example.com/v2\nkind: Bar\nmetadata:\n  name: instance\n  labels:\n    cheese: cheddar\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nLabels: labelMap{\n\"cheese\": \"cheddar\",\n},\nFsSlice: []types.FieldSpec{\n{\nPath:               \"metadata/labels\",\nCreateIfNotPresent: true,\n},\n{\nGvk: resid.Gvk{\nVersion: \"v1\",\n},\nPath:               \"a/b\",\nCreateIfNotPresent: true,\n},\n},\n},"
+    },
+    {
+      "name": "fieldSpecWithVersionInConfigButNoGroupInData",
+      "input": "apiVersion: v1\nkind: Foo\nmetadata:\n  name: instance\n---\napiVersion: v2\nkind: Bar\nmetadata:\n  name: instance\n",
+      "expectedOutput": "apiVersion: v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    cheese: cheddar\na:\n  b:\n    cheese: cheddar\n---\napiVersion: v2\nkind: Bar\nmetadata:\n  name: instance\n  labels:\n    cheese: cheddar\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nLabels: labelMap{\n\"cheese\": \"cheddar\",\n},\nFsSlice: []types.FieldSpec{\n{\nPath:               \"metadata/labels\",\nCreateIfNotPresent: true,\n},\n{\nGvk: resid.Gvk{\nVersion: \"v1\",\n},\nPath:               \"a/b\",\nCreateIfNotPresent: true,\n},\n},\n},"
+    },
+    {
+      "name": "number",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    hero: batman\n    fiend: riddler\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    hero: batman\n    fiend: riddler\n    1: emmett kelley\n    auto: \"2\"\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nLabels: labelMap{\n\"1\":    \"emmett kelley\",\n\"auto\": \"2\",\n},\nFsSlice: []types.FieldSpec{\n{\nPath:               \"metadata/labels\",\nCreateIfNotPresent: true,\n},\n},\n},"
+    },
+    {
+      "name": "yaml_1_1_compatibility",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    hero: batman\n    fiend: riddler\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    hero: batman\n    fiend: riddler\n    a: \"y\"\n    b: y1\n    c: \"yes\"\n    d: yes1\n    e: \"true\"\n    f: true1\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nLabels: labelMap{\n\"a\": \"y\",\n\"b\": \"y1\",\n\"c\": \"yes\",\n\"d\": \"yes1\",\n\"e\": \"true\",\n\"f\": \"true1\",\n},\nFsSlice: []types.FieldSpec{\n{\nPath:               \"metadata/labels\",\nCreateIfNotPresent: true,\n},\n},\n},"
+    },
+    {
+      "name": "null_labels",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels: null\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    a: a1\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nLabels: labelMap{\n\"a\": \"a1\",\n},\nFsSlice: []types.FieldSpec{\n{\nPath:               \"metadata/labels\",\nCreateIfNotPresent: true,\n},\n},\n},"
+    },
+    {
+      "name": "set_entry_callback",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    witcher: geralt\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  labels:\n    witcher: geralt\n    mage: yennefer\na:\n  b:\n    mage: yennefer\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nLabels: labelMap{\n\"mage\": \"yennefer\",\n},\nFsSlice: []types.FieldSpec{\n{\nPath:               \"metadata/labels\",\nCreateIfNotPresent: true,\n},\n{\nPath:               \"a/b\",\nCreateIfNotPresent: true,\n},\n},\n},\nsetEntryCallback: mutationTrackerStub.MutationTracker,\nexpectedSetEntryArgs: []filtertest_test.SetValueArg{\n{\nKey:      \"mage\",\nValue:    \"yennefer\",\nTag:      \"!!str\",\nNodePath: []string{\"metadata\", \"labels\"},\n},\n{\nKey:      \"mage\",\nValue:    \"yennefer\",\nTag:      \"!!str\",\nNodePath: []string{\"a\", \"b\"},\n},\n},"
+    }
+  ]
+}

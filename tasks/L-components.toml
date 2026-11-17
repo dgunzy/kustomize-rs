@@ -1,0 +1,29 @@
+id = "L-components"
+title = "Components, generator behaviors, diamond accumulation"
+status = "todo"
+owner = "lead"
+difficulty = 4
+order = 60
+depends_on = ["L-smp-merge", "W-generators"]
+summary = '''
+Support `kind: Component` and `components:`: a component accumulates onto the resources gathered so far (resources, then generators, then components, then transformers). Implement generator `behavior: create|merge|replace` when absorbing generated resources that already exist (merging data, labels and annotations as upstream does). Check the error cases for repeated bases and conflicts.
+'''
+
+[context]
+upstream = [
+  "kustomize:api/internal/target/kusttarget.go#accumulateComponents,accumulateResources,accumulateDirectory",
+  "kustomize:api/internal/accumulator/resaccumulator.go#AbsorbAll,AppendAll",
+  "kustomize:api/resmap/reswrangler.go#appendReplaceOrMerge"
+]
+read = ["src/build.rs", "src/resource.rs", "src/fieldspec.rs", "src/setters.rs", "src/config.rs"]
+cases = ["component/", "generatormergeandreplace/", "complexcomposition/"]
+max_examples = 2
+budget = 18000
+
+[scope]
+write = ["src/build.rs", "src/resource.rs", "src/kustomization.rs", "src/lib.rs"]
+
+[accept]
+tests = ["components"]
+cases = []
+min_new_passes = 5

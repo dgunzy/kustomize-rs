@@ -1,0 +1,41 @@
+{
+  "upstream": "api/filters/replicacount/replicacount_test.go",
+  "cases": [
+    {
+      "name": "update field",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nspec:\n  replicas: 5\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nspec:\n  replicas: 42\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: Filter{\nReplica: types.Replica{\nName:  \"dep\",\nCount: 42,\n},\nFieldSpec: types.FieldSpec{Path: \"spec/replicas\"},\n},"
+    },
+    {
+      "name": "add field",
+      "input": "apiVersion: custom/v1\nkind: Custom\nmetadata:\n  name: cus\nspec:\n  template:\n    other: something\n",
+      "expected": "apiVersion: custom/v1\nkind: Custom\nmetadata:\n  name: cus\nspec:\n  template:\n    other: something\n    replicas: 42\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: Filter{\nReplica: types.Replica{\nName:  \"cus\",\nCount: 42,\n},\nFieldSpec: types.FieldSpec{\nPath:               \"spec/template/replicas\",\nCreateIfNotPresent: true,\n},\n},"
+    },
+    {
+      "name": "add_field_null",
+      "input": "apiVersion: custom/v1\nkind: Custom\nmetadata:\n  name: cus\nspec:\n  template:\n    other: something\n    replicas: null\n",
+      "expected": "apiVersion: custom/v1\nkind: Custom\nmetadata:\n  name: cus\nspec:\n  template:\n    other: something\n    replicas: 42\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: Filter{\nReplica: types.Replica{\nName:  \"cus\",\nCount: 42,\n},\nFieldSpec: types.FieldSpec{\nPath:               \"spec/template/replicas\",\nCreateIfNotPresent: true,\n},\n},"
+    },
+    {
+      "name": "no update if CreateIfNotPresent is false",
+      "input": "apiVersion: custom/v1\nkind: Custom\nmetadata:\n  name: cus\nspec:\n  template:\n    other: something\n",
+      "expected": "apiVersion: custom/v1\nkind: Custom\nmetadata:\n  name: cus\nspec:\n  template:\n    other: something\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: Filter{\nReplica: types.Replica{\nName:  \"cus\",\nCount: 42,\n},\nFieldSpec: types.FieldSpec{\nPath: \"spec/template/replicas\",\n},\n},"
+    },
+    {
+      "name": "update multiple fields",
+      "input": "apiVersion: custom/v1\nkind: Custom\nmetadata:\n  name: cus\nspec:\n  template:\n    replicas: 5\n",
+      "expected": "apiVersion: custom/v1\nkind: Custom\nmetadata:\n  name: cus\nspec:\n  template:\n    replicas: 42\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: Filter{\nReplica: types.Replica{\nName:  \"cus\",\nCount: 42,\n},\nFieldSpec: types.FieldSpec{Path: \"spec/template/replicas\"},\n},"
+    },
+    {
+      "name": "mutation tracker",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nspec:\n  replicas: 5\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nspec:\n  replicas: 42\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: Filter{\nReplica: types.Replica{\nName:  \"dep\",\nCount: 42,\n},\nFieldSpec: types.FieldSpec{Path: \"spec/replicas\"},\n},\nmutationTracker: mutationTrackerStub.MutationTracker,\nexpectedSetValueArgs: []filtertest_test.SetValueArg{\n{\nValue:    \"42\",\nTag:      \"!!int\",\nNodePath: []string{\"spec\", \"replicas\"},\n},\n},"
+    }
+  ]
+}

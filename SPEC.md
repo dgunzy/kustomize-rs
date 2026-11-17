@@ -193,6 +193,11 @@ Tiers set the order of work, not a promise. Everything stays open-ended:
 
 ## 5. Work plan: TDD, piece by piece
 
+The order of work and who does it (lead vs worker) is in ROADMAP.md: hardest
+foundations first, done by the lead, then translation tasks delegated to workers
+through `tools/krs.py` (delegation/README.md). The milestones below are the
+outcome view of the same plan.
+
 The loop for every feature:
 
 1. Pick the feature with the most cases waiting on it (top of
@@ -202,8 +207,9 @@ The loop for every feature:
    unit tests in the module for the behavior and edge cases you find there.
 4. Implement it: move the field from `Kustomization::rest` to a typed field,
    then add the transformer or generator.
-5. `just ci`, then `just conformance`. Commit the updated `STATUS.md` with the
-   change, so the diff shows which cases it unlocked.
+5. `just ci`, `just regressions`, then `just conformance`. Commit the updated
+   `STATUS.md` with the change, so the diff shows which cases it unlocked. Once
+   it's reviewed, `just baseline` ratchets the new passes.
 
 A feature is done when its fixture groups pass, or every remaining failure is
 understood and written down in STATUS.md or an issue.
@@ -297,11 +303,27 @@ Most cases fail until their features land, so conformance never blocks a merge:
 - `cargo test` / `just ci` don't run it (`test = false`).
 - `just conformance` always exits 0 and rewrites `conformance/STATUS.md`. That
   file is checked in, so progress shows in review.
-- CI runs it in a separate, report-only job and posts STATUS.md to the job
-  summary.
-- `--strict` exists, which fails if any in-scope case doesn't pass. It's for
-  later, if a ratchet is ever wanted. One option: a checked-in list of cases
-  that must keep passing. Nothing uses it today.
+- CI runs it in a separate job that isn't a required check, and posts
+  STATUS.md to the job summary.
+
+**The ratchet.** `conformance/baseline.txt` lists every case that passes. A
+change may add to it, never lose one:
+- `just regressions` (`--check-regressions`) exits 2 if a baseline case no
+  longer passes;
+- the CI conformance job goes red on a regression, which is visible but not
+  merge-blocking;
+- `krs check` rejects a delegated change that regresses;
+- `just baseline` (`--write-baseline`) and `krs accept` move it up after review.
+
+`--json <path>` writes per-case results for tooling. `--strict` fails unless
+every in-scope case passes, for the far future.
+
+**No special-casing.** `tests/fixture_leaks.rs` runs in `cargo test`, so it *is*
+a gate. It collects the instance data the fixtures use (names, namespaces,
+label and annotation values, images, prefixes) and fails if engine code
+contains one of those strings, a fixture path, or an upstream test name.
+Genuine Kubernetes vocabulary is allowlisted in `conformance/leak-allowlist.txt`,
+each entry with a reason.
 
 Unit tests (`just test`) are the gate: every implemented behavior gets focused
 tests in its module, so regressions show there even while conformance is
@@ -374,4 +396,4 @@ the first task of F1/F2.
   `gix`?
 - Whether flux9s depends on this crate from crates.io or by git while it is
   pre-1.0.
-- Whether to add a regression ratchet once tier 1 is mostly green.
+- Whether the ratchet should become a required check once tier 1 is mostly green.

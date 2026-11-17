@@ -17,9 +17,17 @@ A copy of that license is at tests/fixtures/krusty/LICENSE.kustomize.
       Test inputs and expected outputs recorded by running kustomize's
       api/krusty test suite with an added recorder. Modified: converted from
       Go test code into data files. Source commit: tests/fixtures/krusty/UPSTREAM_COMMIT.
+  - tests/fixtures/units/
+      Table-driven unit test cases from kustomize's api/filters tests.
+      Modified: converted from Go test code into JSON.
   - src/builtin_config/
       kustomize's default field-spec tables (api/internal/konfig/builtinpluginconsts).
       Modified: extracted from Go string constants into YAML files.
+  - src/schema/
+      Tables derived from kustomize's kyaml/openapi package and the Kubernetes
+      OpenAPI schema it embeds (namespace scope of built-in kinds; field
+      structure and patch strategies). Modified: extracted into a compact JSON
+      form, without descriptions or validation.
   - scripts/upstream/harness.patch
       A patch to kustomize's api/testutils/kusttest test harness.
   - Rust source files whose header says they are ported from kustomize.
