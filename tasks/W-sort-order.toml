@@ -1,0 +1,28 @@
+id = "W-sort-order"
+title = "sortOptions and legacy order"
+status = "todo"
+owner = "worker"
+difficulty = 2
+order = 180
+depends_on = ["L-framework"]
+summary = '''
+Implement `sortOptions` (order legacy|fifo, legacySortOptions orderFirst/orderLast) and `Reorder::Legacy` (the CLI default): legacy order puts Namespaces, CRDs, ... first and webhooks last, then sorts by id.
+'''
+
+[context]
+upstream = [
+  "kustomize:api/internal/builtins/SortOrderTransformer.go",
+  "kustomize:api/types/sortoptions.go"
+]
+read = ["src/build.rs", "src/resource.rs"]
+cases = ["sortordertransformer/", "legacy_order/"]
+max_examples = 2
+budget = 12000
+
+[scope]
+write = ["src/sort.rs", "src/lib.rs", "src/kustomization.rs", "src/build.rs"]
+
+[accept]
+tests = ["sort::"]
+cases = []
+min_new_passes = 2

@@ -1,0 +1,29 @@
+id = "W-selector"
+title = "Resource selectors (patch and replacement targets)"
+status = "todo"
+owner = "worker"
+difficulty = 2
+order = 125
+depends_on = ["L-framework"]
+summary = '''
+Port `types.Selector` matching to `src/selector.rs`: group/version/kind/name/namespace as anchored regexes, plus labelSelector and annotationSelector (Kubernetes label-selector syntax: `a=b`, `a!=b`, `a in (x,y)`, `!a`, `a`). Include `ResMap::select(&Selector)`.
+'''
+
+[context]
+upstream = [
+  "kustomize:api/types/selector.go",
+  "kustomize:api/resmap/reswrangler.go#Select",
+  "kustomize:kyaml/resid/resid.go#IsSelectedBy"
+]
+read = ["src/resource.rs"]
+cases = ["gvknpatch/"]
+max_examples = 2
+budget = 10000
+
+[scope]
+write = ["src/selector.rs", "src/lib.rs", "src/resource.rs"]
+
+[accept]
+tests = ["selector::"]
+cases = []
+min_new_passes = 0

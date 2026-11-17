@@ -2,14 +2,37 @@
 // and api/krusty/kustomizer.go, Copyright The Kubernetes Authors, licensed under
 // Apache-2.0. Modified: translated from Go to Rust and adapted to this crate.
 
-//! The build: load a kustomization, gather its resources, and (as features
-//! land) generate and transform them. The pipeline mirrors kustomize's
-//! `KustTarget`; SPEC.md lists the stages in order.
+//! The build pipeline, mirroring kustomize's `KustTarget` and `Kustomizer.Run`.
+//!
+//! Each kustomization directory is *accumulated*:
+//!
+//! 1. resources (files, and directories accumulated recursively)
+//! 2. configurations + crds, merged into the transformer config
+//! 3. generators
+//! 4. components
+//! 5. builtin transformers, in upstream's order (`builtin_transformers`)
+//! 6. validators
+//! 7. vars (merged)
+//!
+//! A child directory's resources and transformer config merge into its
+//! parent's. Then, for the top-level kustomization only:
+//!
+//! 8. hash suffixes on generated resources
+//! 9. name references (follow renames)
+//! 10. vars (resolved)
+//! 11. drop `config.kubernetes.io/local-config` resources
+//! 12. sort, managed-by label, strip build annotations
+//!
+//! Every stage is a named function below. A feature fills its stage; anything
+//! a kustomization asks for that isn't implemented is reported as
+//! [`Error::Unsupported`] before the build starts.
 
 use std::path::{Path, PathBuf};
 
+use crate::config::TransformerConfig;
 use crate::fs::{FileSystem, clean};
 use crate::kustomization::Kustomization;
+use crate::transformers::Transformer;
 use crate::{Error, ResMap, Resource, Result, yaml};
 
 /// Where a kustomization may load files from.
@@ -69,7 +92,69 @@ pub fn build(fs: &dyn FileSystem, dir: impl AsRef<Path>, options: &BuildOptions)
         options,
         stack: Vec::new(),
     };
-    builder.target(&clean(dir.as_ref()))
+    let accumulated = builder.accumulate_target(&clean(dir.as_ref()))?;
+    let mut resources = finish(accumulated)?;
+    emit(&mut resources)?;
+    Ok(resources)
+}
+
+/// What accumulating a kustomization produces, and what a child passes up to
+/// its parent (upstream's `ResAccumulator`).
+struct Accumulated {
+    resources: ResMap,
+    config: TransformerConfig,
+}
+
+impl Accumulated {
+    /// Merge a child kustomization's result (`MergeAccumulator`).
+    fn absorb(&mut self, child: Accumulated) -> Result<()> {
+        self.resources.append_all(child.resources)?;
+        self.config = self.config.merge(&child.config)?;
+        Ok(())
+    }
+}
+
+/// Stages 8–11: run once, on the top-level result.
+fn finish(accumulated: Accumulated) -> Result<ResMap> {
+    let Accumulated {
+        resources,
+        config: _config,
+    } = accumulated;
+    // 8. hash suffixes (W-hash-suffix)
+    // 9. name references (L-nameref): uses `_config.name_reference`
+    // 10. vars
+    // 11. drop local-config resources (W-local-config)
+    Ok(resources)
+}
+
+/// Stage 12: what `Kustomizer.Run` does before returning. Sorting and the
+/// managed-by label are refused in `build` until implemented (W-sort-order).
+fn emit(_resources: &mut ResMap) -> Result<()> {
+    // strip build annotations: kustomize rewrites annotations here, as sorted
+    // string maps (W-metadata-strings)
+    Ok(())
+}
+
+/// Stage 5: builtin transformers, in upstream's order
+/// (`configureBuiltinTransformers` in kusttarget_configplugin.go). A
+/// transformer task constructs its transformer at its slot and pushes it.
+fn builtin_transformers(
+    _kustomization: &Kustomization,
+    _config: &TransformerConfig,
+) -> Result<Vec<Box<dyn Transformer>>> {
+    let transformers: Vec<Box<dyn Transformer>> = Vec::new();
+    // PatchStrategicMerge  patchesStrategicMerge   (W-patches-smp)
+    // Patch                patches                 (W-patches-smp, W-json6902)
+    // Namespace            namespace               (W-namespace)
+    // Prefix               namePrefix              (W-prefix-suffix)
+    // Suffix               nameSuffix              (W-prefix-suffix)
+    // Label                commonLabels, labels    (W-labels)
+    // Annotations          commonAnnotations       (W-annotations)
+    // PatchJson6902        patchesJson6902         (W-json6902)
+    // ReplicaCount         replicas                (W-replicas)
+    // ImageTag             images                  (W-images)
+    // Replacement          replacements            (L-replacements)
+    Ok(transformers)
 }
 
 struct Builder<'a> {
@@ -80,8 +165,8 @@ struct Builder<'a> {
 }
 
 impl Builder<'_> {
-    /// Build one kustomization directory.
-    fn target(&mut self, dir: &Path) -> Result<ResMap> {
+    /// Accumulate one kustomization directory (stages 1–7).
+    fn accumulate_target(&mut self, dir: &Path) -> Result<Accumulated> {
         if self.stack.iter().any(|d| d == dir) {
             return Err(Error::Invalid(format!(
                 "cycle detected: {} includes itself",
@@ -97,28 +182,58 @@ impl Builder<'_> {
         }
 
         self.stack.push(dir.to_path_buf());
-        let result = self.accumulate(dir, &file, &kustomization);
+        let result = self.accumulate_stages(dir, &file, &kustomization);
         self.stack.pop();
         result
     }
 
-    fn accumulate(&mut self, dir: &Path, file: &Path, k: &Kustomization) -> Result<ResMap> {
-        let mut resources = ResMap::default();
+    fn accumulate_stages(
+        &mut self,
+        dir: &Path,
+        file: &Path,
+        k: &Kustomization,
+    ) -> Result<Accumulated> {
+        let mut acc = Accumulated {
+            resources: ResMap::default(),
+            config: TransformerConfig::builtin(),
+        };
+        // 1. resources
+        self.accumulate_resources(&mut acc, dir, file, k)?;
+        // 2. configurations + crds: merged into acc.config (Phase C)
+        // 3. generators (W-generators)
+        // 4. components (L-components)
+        // 5. builtin transformers
+        for transformer in builtin_transformers(k, &acc.config)? {
+            transformer.transform(&mut acc.resources)?;
+        }
+        // 6. validators, 7. vars (Phase C)
+        Ok(acc)
+    }
+
+    /// Stage 1: each entry is a file of resources or a kustomization directory.
+    fn accumulate_resources(
+        &mut self,
+        acc: &mut Accumulated,
+        dir: &Path,
+        file: &Path,
+        k: &Kustomization,
+    ) -> Result<()> {
         for entry in &k.resources {
             if is_remote(entry) {
                 return Err(Error::Unsupported("remote resources".to_string()));
             }
             let path = clean(&dir.join(entry));
             if self.fs.is_dir(&path) {
-                resources.append_all(self.target(&path)?)?;
+                let child = self.accumulate_target(&path)?;
+                acc.absorb(child)?;
             } else {
                 self.check_file_allowed(dir, &path, file)?;
                 for r in self.load_file(&path)? {
-                    resources.append(r)?;
+                    acc.resources.append(r)?;
                 }
             }
         }
-        Ok(resources)
+        Ok(())
     }
 
     fn check_file_allowed(&self, root: &Path, path: &Path, file: &Path) -> Result<()> {

@@ -20,12 +20,19 @@
 //! ```
 
 mod build;
+pub mod config;
 mod error;
+pub mod fieldspec;
 pub mod fs;
 pub mod kustomization;
+pub mod openapi;
 pub mod resource;
+mod schema;
+pub mod setters;
+pub mod smp;
+mod transformers;
 pub mod yaml;
 
 pub use build::{BuildOptions, LoadRestrictions, Reorder, build};
 pub use error::{Error, Result};
-pub use resource::{Gvk, ResId, ResMap, Resource};
+pub use resource::{GenerationBehavior, Gvk, ResId, ResMap, Resource};

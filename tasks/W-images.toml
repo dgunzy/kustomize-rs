@@ -1,0 +1,31 @@
+id = "W-images"
+title = "images"
+status = "todo"
+owner = "worker"
+difficulty = 3
+order = 150
+depends_on = ["L-fieldspec"]
+summary = '''
+Implement `images:` (name, newName, newTag, digest; tag and digest replace each other) at the `images.yaml` field specs, including the legacy container-walking behavior.
+'''
+
+[context]
+upstream = [
+  "kustomize:api/filters/imagetag/imagetag.go",
+  "kustomize:api/filters/imagetag/updater.go",
+  "kustomize:api/filters/imagetag/legacy.go",
+  "kustomize:api/internal/builtins/ImageTagTransformer.go"
+]
+read = ["src/fieldspec.rs", "src/transformers/mod.rs", "src/resource.rs", "src/setters.rs", "src/config.rs"]
+units = ["imagetag_filter", "imagetag_legacy_filter"]
+cases = ["transformersimage/"]
+max_examples = 2
+budget = 14000
+
+[scope]
+write = ["src/transformers/images.rs", "src/transformers/mod.rs", "src/kustomization.rs", "src/build.rs"]
+
+[accept]
+tests = ["transformers::images::", "upstream_imagetag"]
+cases = []
+min_new_passes = 2

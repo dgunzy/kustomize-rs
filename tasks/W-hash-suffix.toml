@@ -1,0 +1,29 @@
+id = "W-hash-suffix"
+title = "Content hash suffix for generated ConfigMaps/Secrets"
+status = "todo"
+owner = "worker"
+difficulty = 2
+order = 175
+depends_on = ["W-generators"]
+summary = '''
+After accumulation, append `-<hash>` to generated ConfigMaps/Secrets unless disabled. Hash = sha256 of the sorted-key JSON encoding ({kind,name,data[,binaryData]} or {kind,type,name,data[,stringData]}), first 10 hex chars with 0->g 1->h 3->k a->m e->t. Record the rename in the lineage. (sha2 may be added as a dependency.)
+'''
+
+[context]
+upstream = [
+  "kustomize:api/hasher/hasher.go",
+  "kustomize:api/internal/builtins/HashTransformer.go",
+  "kustomize:api/internal/target/kusttarget.go#addHashesToNames"
+]
+read = ["src/generators.rs", "src/resource.rs"]
+cases = ["configmaps/"]
+max_examples = 2
+budget = 12000
+
+[scope]
+write = ["src/hash.rs", "src/lib.rs", "src/build.rs", "Cargo.toml", "Cargo.lock"]
+
+[accept]
+tests = ["hash::"]
+cases = []
+min_new_passes = 1

@@ -1,0 +1,112 @@
+{
+  "upstream": "api/filters/nameref/nameref_test.go",
+  "cases": [
+    {
+      "name": "simple scalar",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: oldName\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: NotSecret\nmetadata:\n  name: newName2\n",
+      "referrerFinal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: newName\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"newName2\"},\nreferrerFinal: <referrerFinal>,\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"ref/name\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},"
+    },
+    {
+      "name": "sequence",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nseq:\n- oldName1\n- oldName2\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: NotSecret\nmetadata:\n  name: newName2\n",
+      "referrerFinal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nseq:\n- newName\n- oldName2\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName1\", \"newName2\"},\nreferrerFinal: <referrerFinal>,\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"seq\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},"
+    },
+    {
+      "name": "mapping",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nmap:\n  name: oldName\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: NotSecret\nmetadata:\n  name: newName2\n",
+      "referrerFinal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nmap:\n  name: newName\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"newName2\"},\nreferrerFinal: <referrerFinal>,\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"map\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},"
+    },
+    {
+      "name": "mapping with namespace",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\n  namespace: someNs\nmap:\n  name: oldName\n  namespace: someNs\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n  namespace: someNs\n---\napiVersion: apps/v1\nkind: NotSecret\nmetadata:\n  name: newName2\n---\napiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: thirdName\n",
+      "referrerFinal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\n  namespace: someNs\nmap:\n  name: newName\n  namespace: someNs\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"oldName\", \"oldName\"},\nreferrerFinal: <referrerFinal>,\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"map\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},"
+    },
+    {
+      "name": "null value",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nmap:\n  name: null\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: NotSecret\nmetadata:\n  name: newName2\n",
+      "referrerFinal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nmap:\n  name: null\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"newName2\"},\nreferrerFinal: <referrerFinal>,\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"map\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},"
+    },
+    {
+      "name": "multiple match",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: oldName\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName2\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"oldName\"},\nreferrerFinal: \"\",\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"ref/name\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},"
+    },
+    {
+      "name": "no name",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  notName: oldName\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName2\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"oldName\"},\nreferrerFinal: \"\",\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"ref\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},"
+    },
+    {
+      "name": "prefix match",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: oldName\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName2\n",
+      "referrerFinal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: newName\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"oldName\"},\nprefix:        []string{\"prefix1\", \"prefix2\"},\nsuffix:        []string{\"\", \"suffix2\"},\ninputPrefix:   \"prefix1\",\ninputSuffix:   \"\",\nreferrerFinal: <referrerFinal>,\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"ref/name\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},\nerr: false,"
+    },
+    {
+      "name": "suffix match",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: oldName\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName2\n",
+      "referrerFinal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: newName\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"oldName\"},\nprefix:        []string{\"\", \"prefix2\"},\nsuffix:        []string{\"suffix1\", \"suffix2\"},\ninputPrefix:   \"\",\ninputSuffix:   \"suffix1\",\nreferrerFinal: <referrerFinal>,\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"ref/name\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},\nerr: false,"
+    },
+    {
+      "name": "prefix suffix both match",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: oldName\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName2\n",
+      "referrerFinal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: newName\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"oldName\"},\nprefix:        []string{\"prefix1\", \"prefix2\"},\nsuffix:        []string{\"suffix1\", \"suffix2\"},\ninputPrefix:   \"prefix1\",\ninputSuffix:   \"suffix1\",\nreferrerFinal: <referrerFinal>,\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"ref/name\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},\nerr: false,"
+    },
+    {
+      "name": "multiple match: both",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: oldName\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName2\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"oldName\"},\nprefix:        []string{\"prefix\", \"prefix\"},\nsuffix:        []string{\"suffix\", \"suffix\"},\ninputPrefix:   \"prefix\",\ninputSuffix:   \"suffix\",\nreferrerFinal: \"\",\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"ref/name\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},\nerr: true,"
+    },
+    {
+      "name": "multiple match: only prefix",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: oldName\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName2\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"oldName\"},\nprefix:        []string{\"prefix\", \"prefix\"},\nsuffix:        []string{\"\", \"\"},\ninputPrefix:   \"prefix\",\ninputSuffix:   \"\",\nreferrerFinal: \"\",\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"ref/name\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},\nerr: true,"
+    },
+    {
+      "name": "multiple match: only suffix",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: oldName\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName2\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"oldName\"},\nprefix:        []string{\"\", \"\"},\nsuffix:        []string{\"suffix\", \"suffix\"},\ninputPrefix:   \"\",\ninputSuffix:   \"suffix\",\nreferrerFinal: \"\",\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"ref/name\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},\nerr: true,"
+    },
+    {
+      "name": "no match: neither match",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: oldName\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName2\n",
+      "referrerFinal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: oldName\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"oldName\"},\nprefix:        []string{\"prefix1\", \"prefix2\"},\nsuffix:        []string{\"suffix1\", \"suffix2\"},\ninputPrefix:   \"prefix\",\ninputSuffix:   \"suffix\",\nreferrerFinal: <referrerFinal>,\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"ref/name\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},\nerr: false,"
+    },
+    {
+      "name": "no match: prefix doesn't match",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: oldName\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName2\n",
+      "referrerFinal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: oldName\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"oldName\"},\nprefix:        []string{\"prefix1\", \"prefix2\"},\nsuffix:        []string{\"suffix\", \"suffix\"},\ninputPrefix:   \"prefix\",\ninputSuffix:   \"suffix\",\nreferrerFinal: <referrerFinal>,\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"ref/name\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},\nerr: false,"
+    },
+    {
+      "name": "no match: suffix doesn't match",
+      "referrerOriginal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: oldName\n",
+      "candidates": "apiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName\n---\napiVersion: apps/v1\nkind: Secret\nmetadata:\n  name: newName2\n",
+      "referrerFinal": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nref:\n  name: oldName\n",
+      "go": "referrerOriginal: <referrerOriginal>,\ncandidates: <candidates>,\noriginalNames: []string{\"oldName\", \"oldName\"},\nprefix:        []string{\"prefix\", \"prefix\"},\nsuffix:        []string{\"suffix1\", \"suffix2\"},\ninputPrefix:   \"prefix\",\ninputSuffix:   \"suffix\",\nreferrerFinal: <referrerFinal>,\nfilter: Filter{\nNameFieldToUpdate: types.FieldSpec{Path: \"ref/name\"},\nReferralTarget: resid.Gvk{\nGroup:   \"apps\",\nVersion: \"v1\",\nKind:    \"Secret\",\n},\n},\nerr: false,"
+    }
+  ]
+}

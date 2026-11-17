@@ -1,0 +1,47 @@
+{
+  "upstream": "api/filters/annotations/annotations_test.go",
+  "cases": [
+    {
+      "name": "add",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  annotations:\n    hero: batman\n    fiend: riddler\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  annotations:\n    hero: batman\n    fiend: riddler\n    auto: ford\n    bean: cannellini\n    clown: emmett kelley\n    dragon: smaug\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{Annotations: annoMap{\n\"clown\":  \"emmett kelley\",\n\"auto\":   \"ford\",\n\"dragon\": \"smaug\",\n\"bean\":   \"cannellini\",\n}},"
+    },
+    {
+      "name": "update",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  annotations:\n    hero: batman\n    fiend: riddler\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  annotations:\n    hero: superman\n    fiend: luthor\n    bean: cannellini\n    clown: emmett kelley\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{Annotations: annoMap{\n\"clown\": \"emmett kelley\",\n\"hero\":  \"superman\",\n\"fiend\": \"luthor\",\n\"bean\":  \"cannellini\",\n}},"
+    },
+    {
+      "name": "data-fieldspecs",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  name: instance\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  annotations:\n    sleater: kinney\na:\n  b:\n    sleater: kinney\n---\napiVersion: example.com/v1\nkind: Bar\nmetadata:\n  name: instance\n  annotations:\n    sleater: kinney\na:\n  b:\n    sleater: kinney\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{Annotations: annoMap{\n\"sleater\": \"kinney\",\n}},\nfsslice: []types.FieldSpec{\n{\nPath:               \"a/b\",\nCreateIfNotPresent: true,\n},\n},"
+    },
+    {
+      "name": "number",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  annotations:\n    hero: batman\n    fiend: riddler\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  annotations:\n    hero: batman\n    fiend: riddler\n    2: ford\n    clown: \"1\"\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{Annotations: annoMap{\n\"clown\": \"1\",\n\"2\":     \"ford\",\n}},"
+    },
+    {
+      "name": "yaml_1_1_compatibility",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  annotations:\n    hero: batman\n    fiend: riddler\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  annotations:\n    hero: batman\n    fiend: riddler\n    a: \"y\"\n    b: y1\n    c: \"yes\"\n    d: yes1\n    e: \"true\"\n    f: true1\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{Annotations: annoMap{\n\"a\": \"y\",\n\"b\": \"y1\",\n\"c\": \"yes\",\n\"d\": \"yes1\",\n\"e\": \"true\",\n\"f\": \"true1\",\n}},"
+    },
+    {
+      "name": "null_annotations",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  annotations: null\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  annotations:\n    a: a1\n    b: b1\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{Annotations: annoMap{\n\"a\": \"a1\",\n\"b\": \"b1\",\n}},"
+    },
+    {
+      "name": "set_entry_callback",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\n  annotations:\n    a: a1\n    b: b1\nspec:\n  template:\n    metadata:\n      annotations:\n        a: a1\n        b: b1\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nAnnotations: annoMap{\n\"a\": \"a1\",\n\"b\": \"b1\",\n},\n},\nsetEntryCallback: mutationTrackStub.MutationTracker,\nfsslice: []types.FieldSpec{\n{\nPath:               \"spec/template/metadata/annotations\",\nCreateIfNotPresent: true,\n},\n},\nexpectedSetEntryArgs: []filtertest_test.SetValueArg{\n{\nKey:      \"a\",\nValue:    \"a1\",\nTag:      \"!!str\",\nNodePath: []string{\"metadata\", \"annotations\"},\n},\n{\nKey:      \"a\",\nValue:    \"a1\",\nTag:      \"!!str\",\nNodePath: []string{\"spec\", \"template\", \"metadata\", \"annotations\"},\n},\n{\nKey:      \"b\",\nValue:    \"b1\",\nTag:      \"!!str\",\nNodePath: []string{\"metadata\", \"annotations\"},\n},\n{\nKey:      \"b\",\nValue:    \"b1\",\nTag:      \"!!str\",\nNodePath: []string{\"spec\", \"template\", \"metadata\", \"annotations\"},\n},\n},"
+    }
+  ]
+}

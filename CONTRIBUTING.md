@@ -21,8 +21,13 @@ write unit tests, implement, and run:
 
 ```sh
 just ci            # formatting, linting, audit, tests: what CI gates on
+just regressions   # no previously passing upstream case may fail
 just conformance   # updates conformance/STATUS.md: include it in the PR
 ```
+
+Looking for something to do? `just krs next --owner worker` lists ready,
+well-scoped tasks. `just krs brief <task>` prints everything you need for one.
+See ROADMAP.md and delegation/README.md.
 
 ## Upstream code and attribution
 

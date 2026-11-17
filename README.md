@@ -25,9 +25,11 @@ See [SPEC.md](SPEC.md) for scope, design and the roadmap.
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md).
 
 ```bash
-just ci            # format, lint, unit tests
+just ci            # format, lint, unit tests, fixture-leak check
 just conformance   # score against recorded upstream cases (informational)
+just regressions   # the ratchet: no previously passing case may fail
 just case simple   # run matching cases with diffs
+just krs next      # delegated work that's ready (see ROADMAP.md, delegation/)
 ```
 
 ## Acknowledgements

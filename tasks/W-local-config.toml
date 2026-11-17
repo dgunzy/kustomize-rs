@@ -1,0 +1,28 @@
+id = "W-local-config"
+title = "Drop config.kubernetes.io/local-config resources"
+status = "todo"
+owner = "worker"
+difficulty = 1
+order = 120
+depends_on = ["L-framework"]
+summary = '''
+Resources annotated `config.kubernetes.io/local-config: "true"` are used during the build but dropped from the output (after name references and vars are resolved).
+'''
+
+[context]
+upstream = [
+  "kustomize:api/internal/target/kusttarget.go#IgnoreLocal",
+  "kustomize:api/resource/factory.go#DropLocalNodes"
+]
+read = ["src/build.rs", "src/resource.rs"]
+cases = ["localconfig/"]
+max_examples = 2
+budget = 9000
+
+[scope]
+write = ["src/build.rs"]
+
+[accept]
+tests = ["local_config"]
+cases = []
+min_new_passes = 0

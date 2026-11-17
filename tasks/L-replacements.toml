@@ -1,0 +1,30 @@
+id = "L-replacements"
+title = "replacements"
+status = "todo"
+owner = "lead"
+difficulty = 4
+order = 80
+depends_on = ["L-fieldspec", "W-selector"]
+summary = '''
+Implement `replacements:` (inline and from files): copy a value from a source (selected resource + fieldPath) into targets (selectors, reject lists, fieldPaths with `[name=x]` list matching), with options delimiter, index and create.
+'''
+
+[context]
+upstream = [
+  "kustomize:api/filters/replacement/replacement.go",
+  "kustomize:api/types/replacement.go",
+  "kustomize:api/types/replacementfield.go"
+]
+read = ["src/fieldspec.rs", "src/resource.rs", "src/setters.rs", "src/config.rs"]
+units = ["replacement_filter"]
+cases = ["replacementtransformer/"]
+max_examples = 2
+budget = 16000
+
+[scope]
+write = ["src/transformers/replacements.rs", "src/transformers/mod.rs", "src/kustomization.rs", "src/build.rs"]
+
+[accept]
+tests = ["replacements", "upstream_replacement"]
+cases = []
+min_new_passes = 4

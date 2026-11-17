@@ -1,0 +1,578 @@
+{
+  "upstream": "api/filters/replacement/replacement_test.go",
+  "cases": [
+    {
+      "name": "simple",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: deploy\n    fieldPath: spec.template.spec.containers.0.image\n  targets:\n  - select:\n      kind: Deployment\n      name: deploy\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.7.9\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "complex type",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers: {}\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers: {}\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod\n    fieldPath: spec.containers\n  targets:\n  - select:\n      kind: Deployment\n    fieldPaths:\n    - spec.template.spec.containers\n",
+      "expected": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: busybox\n        name: myapp-container\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers:\n      - image: busybox\n        name: myapp-container\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "from ConfigMap",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy\n  labels:\n    foo: bar\nspec:\n  template:\n    metadata:\n      labels:\n        foo: bar\n    spec:\n      containers:\n        - name: command-demo-container\n          image: debian\n          command: [\"printenv\"]\n          args:\n            - HOSTNAME\n            - PORT\n        - name: busybox\n          image: busybox:latest\n          args:\n            - echo\n            - HOSTNAME\n            - PORT\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOSTNAME: example.com\n  PORT: 8080\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.HOSTNAME\n  targets:\n  - select:\n      kind: Deployment\n    fieldPaths:\n    - spec.template.spec.containers.0.args.0\n    - spec.template.spec.containers.1.args.1\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.PORT\n  targets:\n  - select:\n      kind: Deployment\n    fieldPaths:\n    - spec.template.spec.containers.0.args.1\n    - spec.template.spec.containers.1.args.2\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy\n  labels:\n    foo: bar\nspec:\n  template:\n    metadata:\n      labels:\n        foo: bar\n    spec:\n      containers:\n      - name: command-demo-container\n        image: debian\n        command: [\"printenv\"]\n        args:\n        - example.com\n        - \"8080\"\n      - name: busybox\n        image: busybox:latest\n        args:\n        - echo\n        - example.com\n        - \"8080\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOSTNAME: example.com\n  PORT: 8080\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "multiple matches for source select",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n  targets:\n  - select:\n      kind: Deployment\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpectedErr: \"multiple matches for selector Deployment.[noVer].[noGrp]/[noName].[noNs]\","
+    },
+    {
+      "name": "replacement has no source",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- targets:\n  - select:\n      kind: Deployment\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpectedErr: \"replacements must specify a source and at least one target\","
+    },
+    {
+      "name": "field paths with key-value pairs",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: deploy2\n    fieldPath: spec.template.spec.containers.[name=nginx-tagged].image\n  targets:\n  - select:\n      kind: Deployment\n      name: deploy1\n    fieldPaths:\n    - spec.template.spec.containers.[name=postgresdb].image\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.7.9\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "select by group and version",
+      "input": "apiVersion: my-group-1/v1\nkind: Custom\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: my-group-2/v2\nkind: Custom\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: my-group-3/v3\nkind: Custom\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    group: my-group-2\n    fieldPath: spec.template.spec.containers.0.image\n  targets:\n  - select:\n      version: v3\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n",
+      "expected": "apiVersion: my-group-1/v1\nkind: Custom\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: my-group-2/v2\nkind: Custom\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: my-group-3/v3\nkind: Custom\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.7.9\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "missing metadata",
+      "input": "spec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: my-group/v1\nkind: Custom\nmetadata:\n  name: my-name-1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: my-group/v1\nkind: Custom\nmetadata:\n  name: my-name-2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    name: my-name-1\n    fieldPath: spec.template.spec.containers.0.image\n  targets:\n  - select:\n      name: my-name-2\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n",
+      "expected": "spec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: my-group/v1\nkind: Custom\nmetadata:\n  name: my-name-1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: my-group/v1\nkind: Custom\nmetadata:\n  name: my-name-2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.7.9\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "reject 1",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: deploy2\n    fieldPath: spec.template.spec.containers.0.image\n  targets:\n  - select:\n      kind: Deployment\n    reject:\n    - name: deploy2\n    - name: deploy3\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.7.9\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "reject 2",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: StatefulSet\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    fieldPath: spec.template.spec.containers.0.image\n  targets:\n  - select:\n      version: v1\n    reject:\n    - kind: Deployment\n      name: my-name\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: StatefulSet\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.7.9\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "reject 3",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: StatefulSet\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    fieldPath: spec.template.spec.containers.0.image\n  targets:\n  - select:\n      version: v1\n    reject:\n    - kind: Deployment\n    - name: my-name\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: StatefulSet\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "partial string replacement - replace",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: deploy2\n    fieldPath: spec.template.spec.containers.0.image\n    options:\n      delimiter: ':'\n  targets:\n  - select:\n      kind: Deployment\n      name: deploy1\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n    options:\n      delimiter: ':'\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "partial string replacement - prefix",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod1\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: my/group\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: pod2\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: group/config\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod1\n    fieldPath: spec.volumes.0.projected.sources.0.configMap.items.0.path\n    options:\n      delimiter: '/'\n      index: 0\n  targets:\n  - select:\n      kind: Pod\n      name: pod2\n    fieldPaths:\n    - spec.volumes.0.projected.sources.0.configMap.items.0.path\n    options:\n      delimiter: '/'\n      index: -1\n",
+      "expected": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod1\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: my/group\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: pod2\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: my/group/config\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "partial string replacement - suffix",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod1\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: my/group\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: pod2\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: group/config\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod2\n    fieldPath: spec.volumes.0.projected.sources.0.configMap.items.0.path\n    options:\n      delimiter: '/'\n      index: 1\n  targets:\n  - select:\n      kind: Pod\n      name: pod1\n    fieldPaths:\n    - spec.volumes.0.projected.sources.0.configMap.items.0.path\n    options:\n      delimiter: '/'\n      index: 2\n",
+      "expected": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod1\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: my/group/config\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: pod2\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: group/config\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "partial string replacement - last element",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod1\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: my/group1\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: pod2\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: group2\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod2\n    fieldPath: spec.volumes.0.projected.sources.0.configMap.items.0.path\n    options:\n      delimiter: '/'\n      index: 0\n  targets:\n  - select:\n      kind: Pod\n      name: pod1\n    fieldPaths:\n    - spec.volumes.0.projected.sources.0.configMap.items.0.path\n    options:\n      delimiter: '/'\n      index: 1\n",
+      "expected": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod1\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: my/group2\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: pod2\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: group2\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "partial string replacement - first element",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod1\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: group1/config\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: pod2\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: group2\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod2\n    fieldPath: spec.volumes.0.projected.sources.0.configMap.items.0.path\n    options:\n      delimiter: '/'\n      index: 0\n  targets:\n  - select:\n      kind: Pod\n      name: pod1\n    fieldPaths:\n    - spec.volumes.0.projected.sources.0.configMap.items.0.path\n    options:\n      delimiter: '/'\n      index: 0\n",
+      "expected": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod1\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: group2/config\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: pod2\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: group2\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "options.index out of bounds",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod1\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: my/group1\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: pod2\nspec:\n  volumes:\n  - projected:\n      sources:\n      - configMap:\n          name: myconfigmap\n          items:\n          - key: config\n            path: group2\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod2\n    fieldPath: spec.volumes.0.projected.sources.0.configMap.items.0.path\n    options:\n      delimiter: '/'\n      index: -1\n  targets:\n  - select:\n      kind: Pod\n      name: pod1\n    fieldPaths:\n    - spec.volumes.0.projected.sources.0.configMap.items.0.path\n    options:\n      delimiter: '/'\n      index: 1\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpectedErr: \"options.index -1 is out of bounds for value group2\","
+    },
+    {
+      "name": "create",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy1\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod\n    fieldPath: spec.containers\n  targets:\n  - select:\n      name: deploy1\n    fieldPaths:\n    - spec.template.spec.containers\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: busybox\n        name: myapp-container\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "complex type with delimiter in source",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers: {}\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers: {}\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod\n    fieldPath: spec.containers\n    options:\n      delimiter: \"/\"\n  targets:\n  - select:\n      kind: Deployment\n    fieldPaths:\n    - spec.template.spec.containers\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpectedErr: \"delimiter option can only be used with scalar nodes\","
+    },
+    {
+      "name": "complex type with delimiter in target",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers: {}\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers: {}\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod\n    fieldPath: spec.containers\n  targets:\n  - select:\n      kind: Deployment\n    fieldPaths:\n    - spec.template.spec.containers\n    options:\n      delimiter: \"/\"\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpectedErr: \"delimiter option can only be used with scalar nodes\","
+    },
+    {
+      "name": "mapping value contains '.' character",
+      "input": "apiVersion: v1\nkind: Custom\nmetadata:\n  name: custom\n  annotations:\n    a.b.c/d-e: source\n    f.g.h/i-j: target\n",
+      "replacements": "replacements:\n- source:\n    name: custom\n    fieldPath: metadata.annotations.[a.b.c/d-e]\n  targets:\n  - select:\n      name: custom\n    fieldPaths:\n    - metadata.annotations.[f.g.h/i-j]\n",
+      "expected": "apiVersion: v1\nkind: Custom\nmetadata:\n  name: custom\n  annotations:\n    a.b.c/d-e: source\n    f.g.h/i-j: source\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "list index contains '.' character",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source\ndata:\n  value: example\n---\napiVersion: kubernetes-client.io/v1\nkind: ExternalSecret\nmetadata:\n  name: some-secret\nspec:\n  backendType: secretsManager\n  data:\n    - key: some-prefix-replaceme\n      name: .first\n      version: latest\n      property: first\n    - key: some-prefix-replaceme\n      name: second\n      version: latest\n      property: second\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    version: v1\n    name: source\n    fieldPath: data.value\n  targets:\n  - select:\n      group: kubernetes-client.io\n      version: v1\n      kind: ExternalSecret\n      name: some-secret\n    fieldPaths:\n    - spec.data.[name=.first].key\n    - spec.data.[name=second].key\n    options:\n      delimiter: \"-\"\n      index: 2\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source\ndata:\n  value: example\n---\napiVersion: kubernetes-client.io/v1\nkind: ExternalSecret\nmetadata:\n  name: some-secret\nspec:\n  backendType: secretsManager\n  data:\n  - key: some-prefix-example\n    name: .first\n    version: latest\n    property: first\n  - key: some-prefix-example\n    name: second\n    version: latest\n    property: second\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "one replacements target has multiple value",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  labels:\n    app: sample-deploy\n  name: sample-deploy\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: sample-deploy\n  template:\n    metadata:\n      labels:\n        app: sample-deploy\n    spec:\n      containers:\n      - image: nginx\n        name: main\n        env:\n        - name: deployment-name\n          value: XXXXX\n        - name: foo\n          value: bar\n      - image: nginx\n        name: sidecar\n        env:\n        - name: deployment-name\n          value: YYYYY\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: sample-deploy\n    fieldPath: metadata.name\n  targets:\n  - select:\n      kind: Deployment\n    fieldPaths:\n    - spec.template.spec.containers.[image=nginx].env.[name=deployment-name].value\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  labels:\n    app: sample-deploy\n  name: sample-deploy\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: sample-deploy\n  template:\n    metadata:\n      labels:\n        app: sample-deploy\n    spec:\n      containers:\n      - image: nginx\n        name: main\n        env:\n        - name: deployment-name\n          value: sample-deploy\n        - name: foo\n          value: bar\n      - image: nginx\n        name: sidecar\n        env:\n        - name: deployment-name\n          value: sample-deploy\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "one replacements target should create multiple values",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  labels:\n    app: sample-deploy\n  name: sample-deploy\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: sample-deploy\n  template:\n    metadata:\n      labels:\n        app: sample-deploy\n    spec:\n      containers:\n      - image: other\n        name: do-not-modify-me\n        env:\n        - name: foo\n          value: bar\n      - image: nginx\n        name: main\n        env:\n        - name: foo\n          value: bar\n      - image: nginx\n        name: sidecar\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: sample-deploy\n    fieldPath: metadata.name\n  targets:\n  - select:\n      kind: Deployment\n    options:\n      create: true\n    fieldPaths:\n    - spec.template.spec.containers.[image=nginx].env.[name=deployment-name].value\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  labels:\n    app: sample-deploy\n  name: sample-deploy\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: sample-deploy\n  template:\n    metadata:\n      labels:\n        app: sample-deploy\n    spec:\n      containers:\n      - image: other\n        name: do-not-modify-me\n        env:\n        - name: foo\n          value: bar\n      - image: nginx\n        name: main\n        env:\n        - name: foo\n          value: bar\n        - name: deployment-name\n          value: sample-deploy\n      - image: nginx\n        name: sidecar\n        env:\n        - name: deployment-name\n          value: sample-deploy\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "index contains '*' character",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  labels:\n    app: sample-deploy\n  name: sample-deploy\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: sample-deploy\n  template:\n    metadata:\n      labels:\n        app: sample-deploy\n    spec:\n      containers:\n      - image: nginx\n        name: main\n        env:\n        - name: deployment-name\n          value: XXXXX\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: sample-deploy\n    fieldPath: metadata.name\n  targets:\n  - select:\n      kind: Deployment\n    fieldPaths:\n    - spec.template.spec.containers.*.env.[name=deployment-name].value\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  labels:\n    app: sample-deploy\n  name: sample-deploy\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: sample-deploy\n  template:\n    metadata:\n      labels:\n        app: sample-deploy\n    spec:\n      containers:\n      - image: nginx\n        name: main\n        env:\n        - name: deployment-name\n          value: sample-deploy\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "list index contains '*' character",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  labels:\n    app: sample-deploy\n  name: sample-deploy\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: sample-deploy\n  template:\n    metadata:\n      labels:\n        app: sample-deploy\n    spec:\n      containers:\n      - image: nginx\n        name: main\n        env:\n        - name: deployment-name\n          value: XXXXX\n        - name: foo\n          value: bar\n      - image: nginx\n        name: sidecar\n        env:\n        - name: deployment-name\n          value: YYYYY\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: sample-deploy\n    fieldPath: metadata.name\n  targets:\n  - select:\n      kind: Deployment\n    fieldPaths:\n    - spec.template.spec.containers.*.env.[name=deployment-name].value\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  labels:\n    app: sample-deploy\n  name: sample-deploy\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: sample-deploy\n  template:\n    metadata:\n      labels:\n        app: sample-deploy\n    spec:\n      containers:\n      - image: nginx\n        name: main\n        env:\n        - name: deployment-name\n          value: sample-deploy\n        - name: foo\n          value: bar\n      - image: nginx\n        name: sidecar\n        env:\n        - name: deployment-name\n          value: sample-deploy\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "index contains '*' character and create options",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  labels:\n    app: sample-deploy\n  name: sample-deploy\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: sample-deploy\n  template:\n    metadata:\n      labels:\n        app: sample-deploy\n    spec:\n      containers:\n      - image: nginx\n        name: main\n        env:\n        - name: other-env\n          value: YYYYY\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: sample-deploy\n    fieldPath: metadata.name\n  targets:\n  - select:\n      kind: Deployment\n    fieldPaths:\n    - spec.template.spec.containers.*.env.[name=deployment-name].value\n    options:\n      create: true\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  labels:\n    app: sample-deploy\n  name: sample-deploy\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: sample-deploy\n  template:\n    metadata:\n      labels:\n        app: sample-deploy\n    spec:\n      containers:\n      - image: nginx\n        name: main\n        env:\n        - name: other-env\n          value: YYYYY\n        - name: deployment-name\n          value: sample-deploy\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "Issue 1493: wildcard to create or replace field in all containers in all workloads",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: policy\ndata:\n  restart: OnFailure\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: pod1\nspec:\n  containers:\n  - image: nginx\n    name: main\n  - image: nginx\n    name: sidecar\n    imagePullPolicy: Always\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: pod2\nspec:\n  containers:\n  - image: nginx\n    name: main\n    imagePullPolicy: Always\n  - image: nginx\n    name: sidecar\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: policy\n    fieldPath: data.restart\n  targets:\n  - select:\n      kind: Pod\n    fieldPaths:\n    - spec.containers.*.imagePullPolicy\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: policy\ndata:\n  restart: OnFailure\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: pod1\nspec:\n  containers:\n  - image: nginx\n    name: main\n    imagePullPolicy: OnFailure\n  - image: nginx\n    name: sidecar\n    imagePullPolicy: OnFailure\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: pod2\nspec:\n  containers:\n  - image: nginx\n    name: main\n    imagePullPolicy: OnFailure\n  - image: nginx\n    name: sidecar\n    imagePullPolicy: OnFailure\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "multiple field paths in target",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source\ndata:\n  value: example\n---\napiVersion: kubernetes-client.io/v1\nkind: ExternalSecret\nmetadata:\n  name: some-secret\nspec:\n  backendType: secretsManager\n  data:\n    - key: some-prefix-replaceme\n      name: first\n      version: latest\n      property: first\n    - key: some-prefix-replaceme\n      name: second\n      version: latest\n      property: second\n    - key: some-prefix-replaceme\n      name: third\n      version: latest\n      property: third\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    version: v1\n    name: source\n    fieldPath: data.value\n  targets:\n  - select:\n      group: kubernetes-client.io\n      version: v1\n      kind: ExternalSecret\n      name: some-secret\n    fieldPaths:\n    - spec.data.0.key\n    - spec.data.1.key\n    - spec.data.2.key\n    options:\n      delimiter: \"-\"\n      index: 2\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source\ndata:\n  value: example\n---\napiVersion: kubernetes-client.io/v1\nkind: ExternalSecret\nmetadata:\n  name: some-secret\nspec:\n  backendType: secretsManager\n  data:\n  - key: some-prefix-example\n    name: first\n    version: latest\n    property: first\n  - key: some-prefix-example\n    name: second\n    version: latest\n    property: second\n  - key: some-prefix-example\n    name: third\n    version: latest\n    property: third\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "using a previous ID",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: pre-deploy\n  annotations:\n    internal.config.kubernetes.io/previousNames: deploy,deploy\n    internal.config.kubernetes.io/previousKinds: CronJob,Deployment\n    internal.config.kubernetes.io/previousNamespaces: default,default\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: CronJob\n    name: deploy\n    fieldPath: spec.template.spec.containers.0.image\n  targets:\n  - select:\n      kind: Deployment\n      name: deploy\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: pre-deploy\n  annotations:\n    internal.config.kubernetes.io/previousNames: deploy,deploy\n    internal.config.kubernetes.io/previousKinds: CronJob,Deployment\n    internal.config.kubernetes.io/previousNamespaces: default,default\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.7.9\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement source.fieldPath does not exist",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: ports-from\ndata:\n  grpcPort: 8080\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: ports-to\ndata:\n  grpcPort: 8081\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: ports-from\n    fieldPath: data.httpPort\n  targets:\n  - select:\n      kind: ConfigMap\n      name: ports-to\n    fieldPaths:\n    - data.grpcPort\n    options:\n      create: true\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpectedErr: \"fieldPath `data.httpPort` is missing for replacement source ConfigMap.[noVer].[noGrp]/ports-from.[noNs]\","
+    },
+    {
+      "name": "annotationSelector",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy-1\n  annotations:\n    foo: bar-1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy-2\n  annotations:\n    foo: bar-2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: deploy-1\n    fieldPath: spec.template.spec.containers.0.image\n  targets:\n  - select:\n      annotationSelector: foo=bar-1\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy-1\n  annotations:\n    foo: bar-1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.7.9\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy-2\n  annotations:\n    foo: bar-2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "labelSelector",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy-1\n  labels:\n    foo: bar-1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy-2\n  labels:\n    foo: bar-2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: deploy-1\n    fieldPath: spec.template.spec.containers.0.image\n  targets:\n  - select:\n      labelSelector: foo=bar-1\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy-1\n  labels:\n    foo: bar-1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.7.9\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy-2\n  labels:\n    foo: bar-2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "reject via labelSelector",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy-1\n  labels:\n    foo: bar-1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy-2\n  labels:\n    foo: bar-2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: deploy-1\n    fieldPath: spec.template.spec.containers.0.image\n  targets:\n  - select:\n      kind: Deployment\n    reject:\n    - labelSelector: foo=bar-2\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy-1\n  labels:\n    foo: bar-1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.7.9\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy-2\n  labels:\n    foo: bar-2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "string source -> integer target",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: config\ndata:\n  PORT: \"8080\"\n---\napiVersion: apps/v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n    ports:\n    - containerPort: 80\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: config\n    fieldPath: data.PORT\n  targets:\n  - select:\n      kind: Pod\n    fieldPaths:\n    - spec.containers.0.ports.0.containerPort\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: config\ndata:\n  PORT: \"8080\"\n---\napiVersion: apps/v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n    ports:\n    - containerPort: 8080\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "string source -> boolean target",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: config\ndata:\n  MOUNT_TOKEN: \"true\"\n---\napiVersion: apps/v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n    automountServiceAccountToken: false\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: config\n    fieldPath: data.MOUNT_TOKEN\n  targets:\n  - select:\n      kind: Pod\n    fieldPaths:\n    - spec.containers.0.automountServiceAccountToken\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: config\ndata:\n  MOUNT_TOKEN: \"true\"\n---\napiVersion: apps/v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n    automountServiceAccountToken: true\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "numerical string source -> integer creation",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: config\ndata:\n  PORT: \"8080\"\n---\napiVersion: apps/v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n    ports:\n    - protocol: TCP\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: config\n    fieldPath: data.PORT\n  targets:\n  - select:\n      kind: Pod\n    fieldPaths:\n    - spec.containers.0.ports.0.containerPort\n    - spec.containers.0.ports.0.name\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: config\ndata:\n  PORT: \"8080\"\n---\napiVersion: apps/v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n    ports:\n    - protocol: TCP\n      containerPort: 8080\n      name: 8080\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "integer source -> string target",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: config\ndata:\n  PORT: \"8080\"\n---\napiVersion: apps/v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n    ports:\n    - containerPort: 80\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod\n    fieldPath: spec.containers.0.ports.0.containerPort\n  targets:\n  - select:\n      kind: ConfigMap\n    fieldPaths:\n    - data.PORT\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: config\ndata:\n  PORT: \"80\"\n---\napiVersion: apps/v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n    ports:\n    - containerPort: 80\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "boolean source -> string target",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: config\ndata:\n  MOUNT_TOKEN: \"true\"\n---\napiVersion: apps/v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n    automountServiceAccountToken: false\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod\n    fieldPath: spec.containers.0.automountServiceAccountToken\n  targets:\n  - select:\n      kind: ConfigMap\n    fieldPaths:\n    - data.MOUNT_TOKEN\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: config\ndata:\n  MOUNT_TOKEN: \"false\"\n---\napiVersion: apps/v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n    automountServiceAccountToken: false\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "integer source -> integer creation",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: config\ndata:\n  FOO: \"Bar\"\n---\napiVersion: apps/v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n    ports:\n    - containerPort: 80\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod\n    fieldPath: spec.containers.0.ports.0.containerPort\n  targets:\n  - select:\n      kind: ConfigMap\n    fieldPaths:\n    - data.PORT\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: config\ndata:\n  FOO: \"Bar\"\n  PORT: 80\n---\napiVersion: apps/v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n    ports:\n    - containerPort: 80\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replace an existing mapping value",
+      "input": "apiVersion: batch/v1\nkind: Job\nmetadata:\n  name: hello\nspec:\n  template:\n    spec:\n      containers:\n      - image: busybox\n        name: myapp-container\n      restartPolicy: old\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: my-pod\nspec:\n  containers:\n    - image: busybox\n      name: myapp-container\n  restartPolicy: new\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: my-pod\n    fieldPath: spec\n  targets:\n  - select:\n      name: hello\n      kind: Job\n    fieldPaths:\n     - spec.template.spec\n    options:\n      create: true\n",
+      "expected": "apiVersion: batch/v1\nkind: Job\nmetadata:\n  name: hello\nspec:\n  template:\n    spec:\n      containers:\n      - image: busybox\n        name: myapp-container\n      restartPolicy: new\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: my-pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n  restartPolicy: new\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "issue4761 - path not in target with create: true",
+      "input": "---\napiVersion: networking.istio.io/v1alpha3\nkind: EnvoyFilter\nmetadata:\n  name: request-id\nspec:\n  configPatches:\n    - applyTo: NETWORK_FILTER\n    - applyTo: NETWORK_FILTER\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: istio-version\n  annotations:\n    config.kubernetes.io/local-config: true\ndata:\n  ISTIO_REGEX: '^1\\.14.*'\n",
+      "replacements": "replacements:\n  - source:\n      kind: ConfigMap\n      name: istio-version\n      fieldPath: data.ISTIO_REGEX\n    targets:\n      - select:\n          kind: EnvoyFilter\n        fieldPaths:\n          - spec.configPatches.0.match.proxy.proxyVersion\n          - spec.configPatches.1.match.proxy.proxyVersion\n          - spec.configPatches.2.match.proxy.proxyVersion\n          - spec.configPatches.3.match.proxy.proxyVersion\n        options:\n          create: true\n",
+      "expected": "apiVersion: networking.istio.io/v1alpha3\nkind: EnvoyFilter\nmetadata:\n  name: request-id\nspec:\n  configPatches:\n  - applyTo: NETWORK_FILTER\n    match:\n      proxy:\n        proxyVersion: ^1\\.14.*\n  - applyTo: NETWORK_FILTER\n    match:\n      proxy:\n        proxyVersion: ^1\\.14.*\n  - match:\n      proxy:\n        proxyVersion: ^1\\.14.*\n  - match:\n      proxy:\n        proxyVersion: ^1\\.14.*\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: istio-version\n  annotations:\n    config.kubernetes.io/local-config: true\ndata:\n  ISTIO_REGEX: '^1\\.14.*'\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "issue4761 - path not in target with create: false",
+      "input": "---\napiVersion: networking.istio.io/v1alpha3\nkind: EnvoyFilter\nmetadata:\n  name: request-id\nspec:\n  configPatches:\n    - applyTo: NETWORK_FILTER\n    - applyTo: NETWORK_FILTER\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: istio-version\n  annotations:\n    config.kubernetes.io/local-config: true\ndata:\n  ISTIO_REGEX: '^1\\.14.*'\n",
+      "replacements": "replacements:\n  - source:\n      kind: ConfigMap\n      name: istio-version\n      fieldPath: data.ISTIO_REGEX\n    targets:\n      - select:\n          kind: EnvoyFilter\n        fieldPaths:\n          - spec.configPatches.0.match.proxy.proxyVersion\n          - spec.configPatches.1.match.proxy.proxyVersion\n          - spec.configPatches.2.match.proxy.proxyVersion\n          - spec.configPatches.3.match.proxy.proxyVersion\n        options:\n          create: false\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpectedErr: \"unable to find field \\\"spec.configPatches.0.match.proxy.proxyVersion\\\" in replacement target\","
+    },
+    {
+      "name": "issue4761 - wildcard solution",
+      "input": "---\napiVersion: networking.istio.io/v1alpha3\nkind: EnvoyFilter\nmetadata:\n  name: request-id\nspec:\n  configPatches:\n    - applyTo: NETWORK_FILTER\n    - applyTo: NETWORK_FILTER\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: istio-version\n  annotations:\n    config.kubernetes.io/local-config: true\ndata:\n  ISTIO_REGEX: '^1\\.14.*'\n",
+      "replacements": "replacements:\n  - source:\n      kind: ConfigMap\n      name: istio-version\n      fieldPath: data.ISTIO_REGEX\n    targets:\n      - select:\n          kind: EnvoyFilter\n        fieldPaths:\n          - spec.configPatches.*.match.proxy.proxyVersion\n        options:\n          create: true\n",
+      "expected": "apiVersion: networking.istio.io/v1alpha3\nkind: EnvoyFilter\nmetadata:\n  name: request-id\nspec:\n  configPatches:\n  - applyTo: NETWORK_FILTER\n    match:\n      proxy:\n        proxyVersion: ^1\\.14.*\n  - applyTo: NETWORK_FILTER\n    match:\n      proxy:\n        proxyVersion: ^1\\.14.*\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: istio-version\n  annotations:\n    config.kubernetes.io/local-config: true\ndata:\n  ISTIO_REGEX: '^1\\.14.*'\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "append to sequence using index",
+      "input": "apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: myingress\nspec:\n  rules:\n    - host: myingress.example.com\n      http:\n        paths:\n          - path: /\n            pathType: Prefix\n            backend:\n              service:\n                name: my-svc\n                port:\n                  number: 80\n",
+      "replacements": "replacements:\n  - source:\n      kind: Ingress\n      name: myingress\n      fieldPath: spec.rules.0.host\n    targets:\n      - select:\n          kind: Ingress\n          name: myingress\n        fieldPaths:\n          - spec.tls.0.hosts.0\n          - spec.tls.0.secretName\n        options:\n          create: true\n",
+      "expected": "apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: myingress\nspec:\n  rules:\n  - host: myingress.example.com\n    http:\n      paths:\n      - path: /\n        pathType: Prefix\n        backend:\n          service:\n            name: my-svc\n            port:\n              number: 80\n  tls:\n  - hosts:\n    - myingress.example.com\n    secretName: myingress.example.com\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "fail to append to sequence using a distant index",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy\nspec:\n  replicas: 1\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: deploy\n  sourceValue: 2\n  targets:\n  - select:\n      kind: Deployment\n      name: deploy\n    fieldPaths:\n    - spec.replicas\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: custom/postgres:1.9.0\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpectedErr: \"unable to find or create field \\\"spec.tls.5.hosts.5\\\" in replacement target: index 5 specified but only 0 elements found\",\n}, \"replace with static value\": {\ninput: <input>,\nreplacements: <replacements>,\nexpected: <expected>,\n}, \"source value and selector error\": {\ninput: <input>,\nreplacements: <replacements>,\nexpectedErr: \"value and resource selectors are mutually exclusive\","
+    },
+    {
+      "name": "select 1 from many using regex",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  PORT: 8080\n---\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1\n        name: nginx1\n        args:\n        - PORT\n---\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:2\n        name: nginx1\n        args:\n        - PORT\n---\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:3\n        name: nginx1\n        args:\n        - PORT\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.PORT\n  targets:\n  - select:\n      name: d.*2\n    fieldPaths:\n    - spec.template.spec.containers.0.args.0\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  PORT: 8080\n---\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1\n        name: nginx1\n        args:\n        - PORT\n---\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:2\n        name: nginx1\n        args:\n        - \"8080\"\n---\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:3\n        name: nginx1\n        args:\n        - PORT\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "select 2 among 3 using regex",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  PORT: 8080\n---\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1\n        name: nginx1\n        args:\n        - PORT\n---\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:2\n        name: nginx1\n        args:\n        - PORT\n---\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:3\n        name: nginx1\n        args:\n        - PORT\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.PORT\n  targets:\n  - select:\n      name: d.*[1-2]\n    fieldPaths:\n    - spec.template.spec.containers.0.args.0\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  PORT: 8080\n---\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1\n        name: nginx1\n        args:\n        - \"8080\"\n---\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:2\n        name: nginx1\n        args:\n        - \"8080\"\n---\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:3\n        name: nginx1\n        args:\n        - PORT\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "select 2 among 3 and create one field using regex",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"server.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1\n        name: nginx1\n        args:\n        - HOST\n---\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:2\n        name: nginx1\n        args:\n        - HOST\n---\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:3\n        name: nginx1\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.HOST\n  targets:\n  - select:\n      name: d.*[2-3]\n    fieldPaths:\n    - spec.template.spec.containers.0.args.0\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"server.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1\n        name: nginx1\n        args:\n        - HOST\n---\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:2\n        name: nginx1\n        args:\n        - server.svc\n---\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:3\n        name: nginx1\n        args:\n        - server.svc\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "select 2 of 3 and create all the fields using regex",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"server.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1\n        name: nginx1\n---\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:2\n        name: nginx1\n---\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:3\n        name: nginx1\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.HOST\n  targets:\n  - select:\n      name: d.*[2-3]\n    fieldPaths:\n    - spec.template.spec.containers.0.args.0\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"server.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1\n        name: nginx1\n---\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:2\n        name: nginx1\n        args:\n        - server.svc\n---\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:3\n        name: nginx1\n        args:\n        - server.svc\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "select multiple targets and create multiple fields using regex",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"server.svc\"\n  OPT: \"--debug=true\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: tomcat:1\n        name: tomcat1\n---\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: tomcat:2\n        name: tomcat2\n        args:\n        - tomcat.svc\n---\nkind: StatefulSet\nmetadata:\n  name: statefulset1\nspec:\n  template:\n    spec:\n      containers:\n      - image: pg:1\n        name: pg1\n---\nkind: State\nmetadata:\n  name: state2\nspec:\n  template:\n    spec:\n      containers:\n      - image: pg:2\n        name: pg2\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.HOST\n  targets:\n  # create multiple fields, multiple targets, in multiple places\n  - select:\n      # should match deploy1 deploy2\n      name: d.*[1-9]\n      kind: Deployment|State\n    fieldPaths:\n    - spec.template.spec.containers.0.args.0\n    - spec.template.spec.containers.1.name\n    options:\n      create: true\n  - select:\n      # should match state2, should not match statefulset1\n      name: s.*[1-9]\n      kind: Deployment|State\n    fieldPaths:\n    - metadata.annotations.service\n    - spec.template.spec.containers.0.args.0\n    options:\n      create: true\n\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.OPT\n  targets:\n  - select:\n      # should match State/state2, should not match other kinds\n      name: s.*[0-9]\n      kind: State|fulSet|Set|ful|Dep.*\n    fieldPaths:\n    - spec.template.spec.containers.*.args.1\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"server.svc\"\n  OPT: \"--debug=true\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: tomcat:1\n        name: tomcat1\n        args:\n        - server.svc\n      - name: server.svc\n---\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: tomcat:2\n        name: tomcat2\n        args:\n        - server.svc\n      - name: server.svc\n---\nkind: StatefulSet\nmetadata:\n  name: statefulset1\nspec:\n  template:\n    spec:\n      containers:\n      - image: pg:1\n        name: pg1\n---\nkind: State\nmetadata:\n  name: state2\n  annotations:\n    service: server.svc\nspec:\n  template:\n    spec:\n      containers:\n      - image: pg:2\n        name: pg2\n        args:\n        - server.svc\n        - --debug=true\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "name not matching suffixed and prefixed names using regex",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\n  annotations:\n    service: SERVICE\n---\nkind: Deployment\nmetadata:\n  name: prefix-deploy1\n  annotations:\n    service: SERVICE\n---\nkind: Deployment\nmetadata:\n  name: deploy1-suffix\n  annotations:\n    service: SERVICE\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.HOST\n  targets:\n  - select:\n      # should match deploy1-suffix\n      name: dep.*[1-9]-suffix\n      kind: Deployment|State\n    fieldPaths:\n    - metadata.annotations.service\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.HOST\n    options:\n      delimiter: '.'\n  targets:\n  - select:\n      # should match prefix-deploy1\n      name: pref.*-dep.*\n    fieldPaths:\n    - metadata.annotations.service\n    options:\n      delimiter: '.'\n      index: -1\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\n  annotations:\n    service: SERVICE\n---\nkind: Deployment\nmetadata:\n  name: prefix-deploy1\n  annotations:\n    service: tomcat.SERVICE\n---\nkind: Deployment\nmetadata:\n  name: deploy1-suffix\n  annotations:\n    service: tomcat.svc\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "not matching source error using regex",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\n  annotations:\n    service: SERVICE\n---\nkind: Deployment\nmetadata:\n  name: prefix-deploy1\n  annotations:\n    service: SERVICE\n---\nkind: Deployment\nmetadata:\n  name: deploy1-suffix\n  annotations:\n    service: SERVICE\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: cm.*\n    fieldPath: data.HOST\n  targets:\n  - select:\n      kind: Deployment\n    fieldPaths:\n    - metadata.annotations.service\n",
+      "expectedErr": "nothing selected by ConfigMap.[noVer].[noGrp]/cm.*.[noNs]:data.HOST\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpectedErr: <expectedErr>,"
+    },
+    {
+      "name": "not matching target no error using regex",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\n  annotations:\n    service: SERVICE\n---\nkind: Deployment\nmetadata:\n  name: prefix-deploy1\n  annotations:\n    service: SERVICE\n---\nkind: Deployment\nmetadata:\n  name: deploy1-suffix\n  annotations:\n    service: SERVICE\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.HOST\n  targets:\n  - select:\n      name: .*z.*\n      kind: Deployment|State\n    fieldPaths:\n    - metadata.annotations.service\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\n  annotations:\n    service: SERVICE\n---\nkind: Deployment\nmetadata:\n  name: prefix-deploy1\n  annotations:\n    service: SERVICE\n---\nkind: Deployment\nmetadata:\n  name: deploy1-suffix\n  annotations:\n    service: SERVICE\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "reduce selection with matching label using regex",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\n  labels:\n    target: selectme\n---\nkind: Deployment\nmetadata:\n  name: deploy2\n---\nkind: Deployment\nmetadata:\n  name: deploy3\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.HOST\n  targets:\n  - select:\n      # should match deploy1\n      name: .*depl.*\n      labelSelector:\n        target=selectme\n    fieldPaths:\n    - metadata.annotations.service\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\n  labels:\n    target: selectme\n  annotations:\n    service: tomcat.svc\n---\nkind: Deployment\nmetadata:\n  name: deploy2\n---\nkind: Deployment\nmetadata:\n  name: deploy3\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "select label not matching name using regex",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\n  labels:\n    target: selectme\n---\nkind: Deployment\nmetadata:\n  name: deploy2\n---\nkind: Deployment\nmetadata:\n  name: deploy3\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.HOST\n  targets:\n  - select:\n      name: .*notmatching.*\n      labelSelector:\n        target=selectme\n    fieldPaths:\n    - metadata.annotations.service\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\n  labels:\n    target: selectme\n---\nkind: Deployment\nmetadata:\n  name: deploy2\n---\nkind: Deployment\nmetadata:\n  name: deploy3\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "not matching substring using regex",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\n---\nkind: Deployment\nmetadata:\n  name: deploy2\n---\nkind: Deployment\nmetadata:\n  name: mydeploy3\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.HOST\n  targets:\n  - select:\n      # should not match deploy1 deploy2 mydeploy3\n      name: deploy\n    fieldPaths:\n    - metadata.annotations.service\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\nkind: Deployment\nmetadata:\n  name: deploy1\n---\nkind: Deployment\nmetadata:\n  name: deploy2\n---\nkind: Deployment\nmetadata:\n  name: mydeploy3\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "select by group using regex",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\napiVersion: g1/v1\nkind: Deployment\nmetadata:\n  name: deploy1\n---\napiVersion: g2/v1\nkind: Deployment\nmetadata:\n  name: deploy2\n---\napiVersion: g3/v1\nkind: Deployment\nmetadata:\n  name: deploy3\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.HOST\n  targets:\n  - select:\n      # should match deploy1 and deploy2\n      name: .*depl.*\n      group: g[13]\n    fieldPaths:\n    - metadata.annotations.service\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\napiVersion: g1/v1\nkind: Deployment\nmetadata:\n  name: deploy1\n  annotations:\n    service: tomcat.svc\n---\napiVersion: g2/v1\nkind: Deployment\nmetadata:\n  name: deploy2\n---\napiVersion: g3/v1\nkind: Deployment\nmetadata:\n  name: deploy3\n  annotations:\n    service: tomcat.svc\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "select by version using regex",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\napiVersion: g1/v1\nkind: Deployment\nmetadata:\n  name: deploy1\n---\napiVersion: g1/v2\nkind: Deployment\nmetadata:\n  name: deploy2\n---\napiVersion: g1/v3\nkind: Deployment\nmetadata:\n  name: deploy3\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: cm\n    fieldPath: data.HOST\n  targets:\n  - select:\n      # should match deploy1 and deploy2\n      name: .*depl.*\n      version: v[13]\n    fieldPaths:\n    - metadata.annotations.service\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  HOST: \"tomcat.svc\"\n---\napiVersion: g1/v1\nkind: Deployment\nmetadata:\n  name: deploy1\n  annotations:\n    service: tomcat.svc\n---\napiVersion: g1/v2\nkind: Deployment\nmetadata:\n  name: deploy2\n---\napiVersion: g1/v3\nkind: Deployment\nmetadata:\n  name: deploy3\n  annotations:\n    service: tomcat.svc\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "reject 1 with regex",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: deploy2\n    fieldPath: spec.template.spec.containers.0.image\n  targets:\n  - select:\n      kind: Deploy.*\n    reject:\n    - name: .*ploy2|deploy3\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.7.9\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy3\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "reject 2 with regex",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: StatefulSet\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    fieldPath: spec.template.spec.containers.0.image\n  targets:\n  - select:\n      version: v1\n    reject:\n    - kind: Deplo.*\n      name: my-name\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: StatefulSet\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.7.9\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "reject 3 with regex",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: StatefulSet\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    fieldPath: spec.template.spec.containers.0.image\n  targets:\n  - select:\n      version: v1\n    reject:\n    - kind: Deployment\n    - name: my.n.me\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\napiVersion: v1\nkind: StatefulSet\nmetadata:\n  name: my-name\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "simple with regex",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n---\nkind: StatefulSet\nmetadata:\n  name: deploy\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: postgres:1.8.0\n        name: postgresdb\n",
+      "replacements": "replacements:\n- source:\n    kind: Deployment\n    name: deploy\n    fieldPath: spec.template.spec.containers.0.image\n  targets:\n  - select:\n      kind: Deployment|StatefulSet\n      name: deploy\n    fieldPaths:\n    - spec.template.spec.containers.1.image\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.7.9\n        name: postgresdb\n---\nkind: StatefulSet\nmetadata:\n  name: deploy\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:1.7.9\n        name: postgresdb\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "create using regex",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy1\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy2\n---\napiVersion: apps/v1\nkind: NotDeployment\nmetadata:\n  name: notdeploy\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod\n    fieldPath: spec.containers\n  targets:\n  - select:\n      name: depl.*\n    fieldPaths:\n    - spec.template.spec.containers\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: busybox\n        name: myapp-container\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: busybox\n        name: myapp-container\n---\napiVersion: apps/v1\nkind: NotDeployment\nmetadata:\n  name: notdeploy\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "create in source using regex",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy1\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy2\n---\napiVersion: apps/v1\nkind: NotDeployment\nmetadata:\n  name: notdeploy\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod\n    fieldPath: spec.containers\n  targets:\n  - select:\n      name: depl.*\n    fieldPaths:\n    - spec.template.spec.containers\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod\nspec:\n  containers:\n  - image: busybox\n    name: myapp-container\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: busybox\n        name: myapp-container\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy2\nspec:\n  template:\n    spec:\n      containers:\n      - image: busybox\n        name: myapp-container\n---\napiVersion: apps/v1\nkind: NotDeployment\nmetadata:\n  name: notdeploy\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "delimiter using regex",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod\n  labels:\n    number: zero-one\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy1\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy2\n  labels:\n    number: one\n---\napiVersion: apps/v1\nkind: NotDeployment\nmetadata:\n  name: notdeploy\n",
+      "replacements": "replacements:\n- source:\n    kind: Pod\n    name: pod\n    fieldPath: metadata.labels.number\n    options:\n      delimiter: \"-\"\n      index: 1\n  targets:\n  - select:\n      name: depl.*\n    fieldPaths:\n    - metadata.labels.number\n    options:\n      create: true\n",
+      "expected": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: pod\n  labels:\n    number: zero-one\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy1\n  labels:\n    number: one\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: deploy2\n  labels:\n    number: one\n---\napiVersion: apps/v1\nkind: NotDeployment\nmetadata:\n  name: notdeploy\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement contain jsonfield",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-configmap\n  annotations:\n    hostname: www.example.com\ndata:\n  config.json: |-\n    {\n      \"config\": {\n        \"id\": \"42\",\n        \"hostname\": \"REPLACE_TARGET_HOSTNAME\"\n      }\n    }\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: target-configmap\n    fieldPath: metadata.annotations.hostname\n  targets:\n  - select:\n      kind: ConfigMap\n    fieldPaths:\n    - data.config\\.json.config.hostname\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-configmap\n  annotations:\n    hostname: www.example.com\ndata:\n  config.json: |-\n    {\n      \"config\": {\n        \"hostname\": \"www.example.com\",\n        \"id\": \"42\"\n      }\n    }\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement json field with source from separate configmap",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-configmap\ndata:\n  HOSTNAME: www.example.com\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-configmap\ndata:\n  config.json: |-\n    {\n      \"config\": {\n        \"id\": \"42\",\n        \"hostname\": \"REPLACE_TARGET_HOSTNAME\"\n      }\n    }\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: source-configmap\n    fieldPath: data.HOSTNAME\n  targets:\n  - select:\n      kind: ConfigMap\n      name: target-configmap\n    fieldPaths:\n    - data.config\\.json.config.hostname\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-configmap\ndata:\n  HOSTNAME: www.example.com\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-configmap\ndata:\n  config.json: |-\n    {\n      \"config\": {\n        \"hostname\": \"www.example.com\",\n        \"id\": \"42\"\n      }\n    }\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement yaml field in configmap",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: environment-config\ndata:\n  env: dev\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: prometheus-config\ndata:\n  prometheus.yml: |-\n    global:\n      external_labels:\n        prometheus_env: TARGET_ENVIRONMENT\n    scrape_configs:\n      - job_name: \"prometheus\"\n        static_configs:\n          - targets: [\"localhost:9090\"]\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: environment-config\n    fieldPath: data.env\n  targets:\n  - select:\n      kind: ConfigMap\n      name: prometheus-config\n    fieldPaths:\n    - data.prometheus\\.yml.global.external_labels.prometheus_env\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: environment-config\ndata:\n  env: dev\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: prometheus-config\ndata:\n  prometheus.yml: |-\n    global:\n      external_labels:\n        prometheus_env: dev\n    scrape_configs:\n    - job_name: \"prometheus\"\n      static_configs:\n      - targets: [\"localhost:9090\"]\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement json field in annotations",
+      "input": "apiVersion: cloud.google.com/v1\nkind: BackendConfig\nmetadata:\n  name: debug-backend-config\nspec:\n  securityPolicy:\n    name: \"debug-security-policy\"\n---\napiVersion: v1\nkind: Service\nmetadata:\n  name: appA-svc\n  annotations:\n    cloud.google.com/backend-config: '{\"ports\": {\"appA\":\"gke-default-backend-config\"}}'\nspec:\n  ports:\n  - name: appA\n    port: 1234\n    protocol: TCP\n    targetPort: 8080\n",
+      "replacements": "replacements:\n- source:\n    kind: BackendConfig\n    name: debug-backend-config\n    fieldPath: metadata.name\n  targets:\n  - select:\n      kind: Service\n      name: appA-svc\n    fieldPaths:\n    - metadata.annotations.cloud\\.google\\.com/backend-config.ports.appA\n",
+      "expected": "apiVersion: cloud.google.com/v1\nkind: BackendConfig\nmetadata:\n  name: debug-backend-config\nspec:\n  securityPolicy:\n    name: \"debug-security-policy\"\n---\napiVersion: v1\nkind: Service\nmetadata:\n  name: appA-svc\n  annotations:\n    cloud.google.com/backend-config: '{\"ports\":{\"appA\":\"debug-backend-config\"}}'\nspec:\n  ports:\n  - name: appA\n    port: 1234\n    protocol: TCP\n    targetPort: 8080\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement yaml nested value",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: app-config\ndata:\n  replicas: \"3\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: deployment-template\ndata:\n  deployment.yaml: |-\n    apiVersion: apps/v1\n    kind: Deployment\n    metadata:\n      name: my-app\n    spec:\n      replicas: 1\n      selector:\n        matchLabels:\n          app: my-app\n      template:\n        metadata:\n          labels:\n            app: my-app\n        spec:\n          containers:\n          - name: app\n            image: nginx:latest\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: app-config\n    fieldPath: data.replicas\n  targets:\n  - select:\n      kind: ConfigMap\n      name: deployment-template\n    fieldPaths:\n    - data.deployment\\.yaml.spec.replicas\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: app-config\ndata:\n  replicas: \"3\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: deployment-template\ndata:\n  deployment.yaml: |-\n    apiVersion: apps/v1\n    kind: Deployment\n    metadata:\n      name: my-app\n    spec:\n      replicas: 3\n      selector:\n        matchLabels:\n          app: my-app\n      template:\n        metadata:\n          labels:\n            app: my-app\n        spec:\n          containers:\n          - name: app\n            image: nginx:latest\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement json complex nested structure",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-config\ndata:\n  database_host: prod-db.example.com\n  database_port: \"5432\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: app-config\ndata:\n  config.json: |-\n    {\n      \"database\": {\n        \"connections\": {\n          \"primary\": {\n            \"host\": \"localhost\",\n            \"port\": 3306,\n            \"ssl\": true\n          },\n          \"secondary\": {\n            \"host\": \"backup-host\",\n            \"port\": 3307\n          }\n        },\n        \"pool\": {\n          \"min\": 5,\n          \"max\": 10\n        }\n      },\n      \"logging\": {\n        \"level\": \"info\"\n      }\n    }\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: source-config\n    fieldPath: data.database_host\n  targets:\n  - select:\n      kind: ConfigMap\n      name: app-config\n    fieldPaths:\n    - data.config\\.json.database.connections.primary.host\n- source:\n    kind: ConfigMap\n    name: source-config\n    fieldPath: data.database_port\n  targets:\n  - select:\n      kind: ConfigMap\n      name: app-config\n    fieldPaths:\n    - data.config\\.json.database.connections.primary.port\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-config\ndata:\n  database_host: prod-db.example.com\n  database_port: \"5432\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: app-config\ndata:\n  config.json: |-\n    {\n      \"database\": {\n        \"connections\": {\n          \"primary\": {\n            \"host\": \"prod-db.example.com\",\n            \"port\": 5432,\n            \"ssl\": true\n          },\n          \"secondary\": {\n            \"host\": \"backup-host\",\n            \"port\": 3307\n          }\n        },\n        \"pool\": {\n          \"max\": 10,\n          \"min\": 5\n        }\n      },\n      \"logging\": {\n        \"level\": \"info\"\n      }\n    }\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement yaml array element",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: image-config\ndata:\n  new_image: nginx:1.20\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: k8s-manifest\ndata:\n  deployment.yaml: |-\n    apiVersion: apps/v1\n    kind: Deployment\n    metadata:\n      name: web-app\n    spec:\n      template:\n        spec:\n          containers:\n          - name: web\n            image: nginx:1.18\n          - name: sidecar\n            image: busybox:latest\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: image-config\n    fieldPath: data.new_image\n  targets:\n  - select:\n      kind: ConfigMap\n      name: k8s-manifest\n    fieldPaths:\n    - data.deployment\\.yaml.spec.template.spec.containers.[name=web].image\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: image-config\ndata:\n  new_image: nginx:1.20\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: k8s-manifest\ndata:\n  deployment.yaml: |-\n    apiVersion: apps/v1\n    kind: Deployment\n    metadata:\n      name: web-app\n    spec:\n      template:\n        spec:\n          containers:\n          - name: web\n            image: nginx:1.20\n          - name: sidecar\n            image: busybox:latest\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement yaml flow style (kyaml) field",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.yaml: |-\n    labels: {\n      app: \"REPLACE_APP_NAME\",\n      version: \"1.0.0\",\n      env: \"production\",\n    }\n    spec: {\n      replicas: 3,\n      selector: {\n        matchLabels: {\n          app: \"REPLACE_APP_NAME\"\n        }\n      }\n    }\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: source-values\n    fieldPath: data.app_name\n  targets:\n  - select:\n      kind: ConfigMap\n      name: target-config\n    fieldPaths:\n    - data.config\\.yaml.labels.app\n    - data.config\\.yaml.spec.selector.matchLabels.app\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.yaml: |-\n    labels: {app: \"my-awesome-app\", version: \"1.0.0\", env: \"production\"}\n    spec: {replicas: 3, selector: {matchLabels: {app: \"my-awesome-app\"}}}\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement yaml substring options prefix",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.yaml: |-\n    prefix:\n      url: https://example.com/appname/api/endpoint\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: source-values\n    fieldPath: data.proxy\n  targets:\n  - select:\n      kind: ConfigMap\n      name: target-config\n    fieldPaths:\n    - data.config\\.yaml.prefix.url\n    options:\n      delimiter: /\n      index: -1\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.yaml: |-\n    prefix:\n      url: http://proxy/https://example.com/appname/api/endpoint\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement yaml substring options first",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.yaml: |-\n    index0:\n      url: https://example.com/appname/api/endpoint\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: source-values\n    fieldPath: data.protocol\n  targets:\n  - select:\n      kind: ConfigMap\n      name: target-config\n    fieldPaths:\n    - data.config\\.yaml.index0.url\n    options:\n      delimiter: /\n      index: 0\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.yaml: |-\n    index0:\n      url: git://example.com/appname/api/endpoint\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement yaml substring options middle",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.yaml: |-\n    index3:\n      url: https://example.com/appname/api/endpoint\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: source-values\n    fieldPath: data.app_name\n  targets:\n  - select:\n      kind: ConfigMap\n      name: target-config\n    fieldPaths:\n    - data.config\\.yaml.index3.url\n    options:\n      delimiter: /\n      index: 3\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.yaml: |-\n    index3:\n      url: https://example.com/my-awesome-app/api/endpoint\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement yaml substring options suffix",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.yaml: |-\n    suffix:\n      url: https://example.com/appname/api/endpoint\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: source-values\n    fieldPath: data.app_name\n  targets:\n  - select:\n      kind: ConfigMap\n      name: target-config\n    fieldPaths:\n    - data.config\\.yaml.suffix.url\n    options:\n      delimiter: /\n      index: 6\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.yaml: |-\n    suffix:\n      url: https://example.com/appname/api/endpoint/my-awesome-app\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement json substring options prefix",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.json: |-\n    {\n      \"prefix\": {\n        \"url\": \"https://example.com/appname/api/endpoint\"\n      }\n    }\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: source-values\n    fieldPath: data.proxy\n  targets:\n  - select:\n      kind: ConfigMap\n      name: target-config\n    fieldPaths:\n    - data.config\\.json.prefix.url\n    options:\n      delimiter: /\n      index: -1\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.json: |-\n    {\n      \"prefix\": {\n        \"url\": \"http://proxy/https://example.com/appname/api/endpoint\"\n      }\n    }\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement json substring options first",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.json: |-\n    {\n      \"index0\": {\n        \"url\": \"https://example.com/appname/api/endpoint\"\n      }\n    }\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: source-values\n    fieldPath: data.protocol\n  targets:\n  - select:\n      kind: ConfigMap\n      name: target-config\n    fieldPaths:\n    - data.config\\.json.index0.url\n    options:\n      delimiter: /\n      index: 0\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.json: |-\n    {\n      \"index0\": {\n        \"url\": \"git://example.com/appname/api/endpoint\"\n      }\n    }\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement json substring options middle",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.json: |-\n    {\n      \"index3\": {\n        \"url\": \"https://example.com/appname/api/endpoint\"\n      }\n    }\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: source-values\n    fieldPath: data.app_name\n  targets:\n  - select:\n      kind: ConfigMap\n      name: target-config\n    fieldPaths:\n    - data.config\\.json.index3.url\n    options:\n      delimiter: /\n      index: 3\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.json: |-\n    {\n      \"index3\": {\n        \"url\": \"https://example.com/my-awesome-app/api/endpoint\"\n      }\n    }\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement json substring options suffix",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.json: |-\n    {\n      \"suffix\": {\n        \"url\": \"https://example.com/appname/api/endpoint\"\n      }\n    }\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: source-values\n    fieldPath: data.app_name\n  targets:\n  - select:\n      kind: ConfigMap\n      name: target-config\n    fieldPaths:\n    - data.config\\.json.suffix.url\n    options:\n      delimiter: /\n      index: 6\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  proxy: http://proxy\n  protocol: \"git:\"\n  query: \"?foo=bar\"\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.json: |-\n    {\n      \"suffix\": {\n        \"url\": \"https://example.com/appname/api/endpoint/my-awesome-app\"\n      }\n    }\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpected: <expected>,"
+    },
+    {
+      "name": "replacement yaml substring out of bounds",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: source-values\ndata:\n  app_name: \"my-awesome-app\"\n---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: target-config\ndata:\n  config.yaml: |-\n    targets:\n      - url: https://example.com/appname/api/endpoint\n",
+      "replacements": "replacements:\n- source:\n    kind: ConfigMap\n    name: source-values\n    fieldPath: data.app_name\n  targets:\n  - select:\n      kind: ConfigMap\n      name: target-config\n    fieldPaths:\n    - data.config\\.yaml.targets.1.url\n    options:\n      delimiter: /\n      index: 3\n",
+      "go": "input: <input>,\nreplacements: <replacements>,\nexpectedErr: \"index 1 specified but only 1 elements found\","
+    }
+  ]
+}

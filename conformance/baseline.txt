@@ -1,0 +1,24 @@
+# Conformance ratchet: cases that pass. Written by `just baseline`; do not edit.
+# A change may add cases here, never lose one (`just regressions`).
+accumulation/TestBaseMustHaveKustomizationFile/01
+accumulation/TestResourceHasAnchor/01
+accumulation/TestResourceNotFound/01
+accumulation/TestTargetMustHaveKustomizationFile/01
+accumulation/TestTargetMustHaveOnlyOneKustomizationFile/01
+basic_io/TestBasicIO3812/01
+basic_io/TestBasicIO_2/01
+directoryarrangement/TestIssue596AllowDirectoriesThatAreSubstringsOfEachOther/01
+keepemptyarray/TestKeepEmptyArray/01
+kustomizationmetadata/TestKustomizationMetadata/01
+multibytecharacter/TestMultibyteCharInConfigMap/01
+namespaces/TestNamespacedSecrets/01
+no_list_items/TestEmptyList/01
+no_list_items/TestListSuffix5042/01
+no_list_items/TestListSuffix5485/01
+no_list_items/TestListToIndividualResources/01
+no_list_items/TestSuffix5042/01
+nullvalues/TestNullValues1/01
+nullvalues/TestNullValues2/01
+openapicustomschema/TestCustomOpenApiFieldDefaultVersion/01
+poddisruptionbudget/TestPodDisruptionBudgetBasics/01
+stringquoteblank/TestLongLineBreaks/01

@@ -1,0 +1,32 @@
+id = "W-generators"
+title = "configMapGenerator / secretGenerator / generatorOptions"
+status = "todo"
+owner = "worker"
+difficulty = 3
+order = 170
+depends_on = ["L-framework"]
+summary = '''
+Implement ConfigMap and Secret generators: literals, files (with key=path), env files; generatorOptions (labels, annotations, disableNameSuffixHash, immutable); secrets base64-encode values and default to type Opaque. Mark generated resources as needing a hash suffix and record their behavior (create/merge/replace) for L-components.
+'''
+
+[context]
+upstream = [
+  "kustomize:api/internal/builtins/ConfigMapGenerator.go",
+  "kustomize:api/internal/builtins/SecretGenerator.go",
+  "kustomize:api/internal/generators/configmap.go",
+  "kustomize:api/internal/generators/secret.go",
+  "kustomize:api/internal/generators/utils.go",
+  "kustomize:api/kv/kv.go"
+]
+read = ["src/resource.rs", "src/transformers/mod.rs"]
+cases = ["configmaps/", "generatoroptions/"]
+max_examples = 2
+budget = 16000
+
+[scope]
+write = ["src/generators.rs", "src/lib.rs", "src/kustomization.rs", "src/build.rs"]
+
+[accept]
+tests = ["generators::"]
+cases = []
+min_new_passes = 0

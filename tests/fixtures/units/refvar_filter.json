@@ -1,0 +1,59 @@
+{
+  "upstream": "api/filters/refvar/refvar_test.go",
+  "cases": [
+    {
+      "name": "simple scalar",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nspec:\n  replicas: $(VAR)\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nspec:\n  replicas: 5\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: Filter{\nMappingFunc: makeMf(map[string]interface{}{\n\"VAR\": int64(5),\n}),\nFieldSpec: types.FieldSpec{Path: \"spec/replicas\"},\n},"
+    },
+    {
+      "name": "non-string scalar",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nspec:\n  replicas: 1\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nspec:\n  replicas: 1\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: Filter{\nMappingFunc: makeMf(map[string]interface{}{\n\"VAR\": int64(5),\n}),\nFieldSpec: types.FieldSpec{Path: \"spec/replicas\"},\n},"
+    },
+    {
+      "name": "wrong path",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nspec:\n  replicas: 1\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\nspec:\n  replicas: 1\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: Filter{\nMappingFunc: makeMf(map[string]interface{}{\n\"VAR\": int64(5),\n}),\nFieldSpec: types.FieldSpec{Path: \"a/b/c\"},\n},"
+    },
+    {
+      "name": "sequence",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\ndata:\n- $(FOO)\n- $(BAR)\n- $(BAZ)\n- $(FOO)+$(BAR)\n- $(BOOL)\n- $(FLOAT)\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\ndata:\n- foo\n- bar\n- $(BAZ)\n- foo+bar\n- false\n- 1.23\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: Filter{\nMappingFunc: makeMf(map[string]interface{}{\n\"FOO\":   \"foo\",\n\"BAR\":   \"bar\",\n\"BOOL\":  false,\n\"FLOAT\": 1.23,\n}),\nFieldSpec: types.FieldSpec{Path: \"data\"},\n},"
+    },
+    {
+      "name": "maps",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\ndata:\n  FOO: $(FOO)\n  BAR: $(BAR)\n  BAZ: $(BAZ)\n  PLUS: $(FOO)+$(BAR)\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\ndata:\n  FOO: foo\n  BAR: bar\n  BAZ: $(BAZ)\n  PLUS: foo+bar\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: Filter{\nMappingFunc: makeMf(map[string]interface{}{\n\"FOO\": \"foo\",\n\"BAR\": \"bar\",\n}),\nFieldSpec: types.FieldSpec{Path: \"data\"},\n},"
+    },
+    {
+      "name": "complicated case",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\ndata:\n  slice1:\n  - $(FOO)\n  slice2:\n    FOO: $(FOO)\n    BAR: $(BAR)\n    BOOL: false\n    INT: 0\n    SLICE:\n    - $(FOO)\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\ndata:\n  slice1:\n  - $(FOO)\n  slice2:\n    FOO: foo\n    BAR: bar\n    BOOL: false\n    INT: 0\n    SLICE:\n    - $(FOO)\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: Filter{\nMappingFunc: makeMf(map[string]interface{}{\n\"FOO\": \"foo\",\n\"BAR\": \"bar\",\n}),\nFieldSpec: types.FieldSpec{Path: \"data/slice2\"},\n},"
+    },
+    {
+      "name": "null value",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\ndata:\n  FOO: null\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\ndata:\n  FOO: null\n",
+      "go": "input: <input>,\nexpected: <expected>,\nfilter: Filter{\nMappingFunc: makeMf(map[string]interface{}{\n// no replacements!\n}),\nFieldSpec: types.FieldSpec{Path: \"data/FOO\"},\n},"
+    },
+    {
+      "name": "non-string in sequence",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\ndata:\n  slice:\n  - false\n",
+      "expectedError": "considering field 'data/slice' of object Deployment.v1.apps/dep.[noNs]: invalid value type expect a string\n",
+      "go": "input: <input>,\nexpectedError: <expectedError>,\nfilter: Filter{\nMappingFunc: makeMf(map[string]interface{}{\n\"VAR\": int64(5),\n}),\nFieldSpec: types.FieldSpec{Path: \"data/slice\"},\n},"
+    },
+    {
+      "name": "invalid key in map",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: dep\ndata:\n  1: str\n",
+      "expectedError": "considering field 'data' of object Deployment.v1.apps/dep.[noNs]: invalid map key: value='1', tag='\n",
+      "go": "input: <input>,\nexpectedError: <expectedError> + yaml.NodeTagInt + `'`,\nfilter: Filter{\nMappingFunc: makeMf(map[string]interface{}{\n\"VAR\": int64(5),\n}),\nFieldSpec: types.FieldSpec{Path: \"data\"},\n},"
+    }
+  ]
+}

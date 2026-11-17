@@ -1,0 +1,6 @@
+# Strings the fixture-leak check (tests/fixture_leaks.rs) accepts in engine code
+# even though some fixture also uses them as instance data. One per line; give a
+# reason after '#'. Adding an entry is a lead decision: if in doubt, the code
+# should read the value from its input instead.
+default        # the default namespace, used by namespace resolution
+kube-system    # well-known system namespace

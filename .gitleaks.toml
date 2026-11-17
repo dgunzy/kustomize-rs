@@ -1,0 +1,20 @@
+# gitleaks config: the default rules, plus an allowlist for data generated
+# from upstream kustomize (scripts/import-upstream.sh). Those files are not
+# hand-written and can't hold our secrets, but they trip the generic rules:
+#   - src/schema/: Kubernetes kind/definition names like "...|SecretArgs":
+#     "io.k8s.api.apps.v1.SecretArgs" look like key/value secrets.
+#   - tests/fixtures/: upstream test cases include fake Secret manifests.
+# Everything else is still scanned with the default rules.
+#
+# Uses the single [allowlist] table: CI runs gitleaks 8.24, and
+# [[allowlists]] needs 8.25+.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated upstream data (schema tables, recorded test fixtures)"
+paths = [
+  '''^src/schema/''',
+  '''^tests/fixtures/''',
+]

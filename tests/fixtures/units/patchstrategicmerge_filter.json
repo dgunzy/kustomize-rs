@@ -1,0 +1,143 @@
+{
+  "upstream": "api/filters/patchstrategicmerge/patchstrategicmerge_test.go",
+  "cases": [
+    {
+      "name": "simple",
+      "input": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: clown\nspec:\n  numReplicas: 1\n",
+      "expected": "apiVersion: v1\nkind: Deployment\nmetadata:\n  name: clown\nspec:\n  numReplicas: 999\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`apiVersion: v1\nkind: Deployment\nmetadata:\nname: clown\nspec:\nnumReplicas: 999\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "nullMapEntry1",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: my-foo\nspec:\n  bar:\n    B:\n    C: Z\n",
+      "expected": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: my-foo\nspec:\n  bar:\n    C: Z\n    D: W\n  baz:\n    hello: world\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: example.com/v1\nkind: Foo\nmetadata:\nname: my-foo\nspec:\nbar:\nC: Z\nD: W\nbaz:\nhello: world\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "nullMapEntry2",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: my-foo\nspec:\n  bar:\n    C: Z\n    D: W\n  baz:\n    hello: world\n",
+      "expected": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: my-foo\nspec:\n  bar:\n    C: Z\n    D: W\n  baz:\n    hello: world\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: example.com/v1\nkind: Foo\nmetadata:\nname: my-foo\nspec:\nbar:\nB:\nC: Z\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "simple patch",
+      "input": "apiVersion: apps/v1\nmetadata:\n  name: myDeploy\nkind: Deployment\n",
+      "expected": "apiVersion: apps/v1\nmetadata:\n  name: yourDeploy\nkind: Deployment\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\nmetadata:\nname: yourDeploy\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "container patch",
+      "input": "apiVersion: apps/v1\nmetadata:\n  name: myDeploy\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo1\n      - name: foo2\n      - name: foo3\n",
+      "expected": "apiVersion: apps/v1\nmetadata:\n  name: myDeploy\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo0\n      - name: foo1\n      - name: foo2\n      - name: foo3\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: apps/v1\nmetadata:\nname: myDeploy\nkind: Deployment\nspec:\ntemplate:\nspec:\ncontainers:\n- name: foo0\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "volumes patch",
+      "input": "apiVersion: apps/v1\nmetadata:\n  name: myDeploy\nkind: Deployment\nspec:\n  template:\n    spec:\n      volumes:\n      - name: foo1\n      - name: foo2\n      - name: foo3\n",
+      "expected": "apiVersion: apps/v1\nmetadata:\n  name: myDeploy\nkind: Deployment\nspec:\n  template:\n    spec:\n      volumes:\n      - name: foo0\n      - name: foo1\n      - name: foo2\n      - name: foo3\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: apps/v1\nmetadata:\nname: myDeploy\nkind: Deployment\nspec:\ntemplate:\nspec:\nvolumes:\n- name: foo0\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "nested patch",
+      "input": "apiVersion: apps/v1\nmetadata:\n  name: myDeploy\nkind: Deployment\nspec:\n  containers:\n  - name: nginx\n    args:\n    - abc\n",
+      "expected": "apiVersion: apps/v1\nmetadata:\n  name: myDeploy\nkind: Deployment\nspec:\n  containers:\n  - name: nginx\n    args:\n    - def\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\nspec:\ncontainers:\n- name: nginx\nargs:\n- def\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "remove mapping - directive",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: myDeploy\nspec:\n  template:\n    spec:\n      containers:\n      - name: test\n        image: test\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: myDeploy\nspec:\n  template:\n    spec:\n      containers: []\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: apps/v1\nkind: Deployment\nmetadata:\nname: myDeploy\nspec:\ntemplate:\nspec:\ncontainers:\n- name: test\nimage: test\n$patch: delete\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "replace mapping - directive",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: myDeploy\nspec:\n  template:\n    spec:\n      containers:\n      - name: test\n        image: test\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: myDeploy\nspec:\n  template:\n    spec:\n      containers:\n      - name: new\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: apps/v1\nkind: Deployment\nmetadata:\nname: myDeploy\nspec:\ntemplate:\nspec:\n$patch: replace\ncontainers:\n- name: new\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "merge mapping - directive",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: myDeploy\nspec:\n  template:\n    spec:\n      containers:\n      - name: test\n        image: test\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: myDeploy\nspec:\n  template:\n    spec:\n      containers:\n      - name: test\n        image: test1\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: apps/v1\nkind: Deployment\nmetadata:\nname: myDeploy\nspec:\ntemplate:\nspec:\ncontainers:\n- name: test\nimage: test1\n$patch: merge\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "remove list - directive",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: myDeploy\nspec:\n  template:\n    spec:\n      containers:\n      - name: test\n        image: test\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: myDeploy\nspec:\n  template:\n    spec: {}\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: apps/v1\nkind: Deployment\nmetadata:\nname: myDeploy\nspec:\ntemplate:\nspec:\ncontainers:\n- whatever\n- $patch: delete\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "replace list - directive",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: myDeploy\nspec:\n  template:\n    spec:\n      containers:\n      - name: test\n        image: test\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: myDeploy\nspec:\n  template:\n    spec:\n      containers:\n      - name: replace\n        image: replace\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: apps/v1\nkind: Deployment\nmetadata:\nname: myDeploy\nspec:\ntemplate:\nspec:\ncontainers:\n- name: replace\nimage: replace\n- $patch: replace\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "merge list - directive",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: myDeploy\nspec:\n  template:\n    spec:\n      containers:\n      - name: test\n        image: test\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: myDeploy\nspec:\n  template:\n    spec:\n      containers:\n      - name: test2\n        image: test2\n      - name: test\n        image: test\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: apps/v1\nkind: Deployment\nmetadata:\nname: myDeploy\nspec:\ntemplate:\nspec:\ncontainers:\n- name: test2\nimage: test2\n- $patch: merge\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "list map keys - add a port, no names",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n name: test-deployment\nspec:\n template:\n   spec:\n     containers:\n     - image: test-image\n       name: test-deployment\n       ports:\n       - containerPort: 8080\n         protocol: TCP\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test-deployment\nspec:\n  template:\n    spec:\n      containers:\n      - image: test-image\n        name: test-deployment\n        ports:\n        - containerPort: 8080\n          protocol: UDP\n        - containerPort: 80\n          protocol: UDP\n        - containerPort: 8080\n          protocol: TCP\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: apps/v1\nkind: Deployment\nmetadata:\nname: test-deployment\nspec:\ntemplate:\nspec:\ncontainers:\n- image: test-image\nname: test-deployment\nports:\n- containerPort: 8080\nprotocol: UDP\n- containerPort: 80\nprotocol: UDP\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "list map keys - add name to port",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n name: test-deployment\nspec:\n template:\n   spec:\n     containers:\n     - image: test-image\n       name: test-deployment\n       ports:\n       - containerPort: 8080\n         protocol: UDP\n       - containerPort: 8080\n         protocol: TCP\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test-deployment\nspec:\n  template:\n    spec:\n      containers:\n      - image: test-image\n        name: test-deployment\n        ports:\n        - containerPort: 8080\n          protocol: UDP\n          name: UDP-name-patch\n        - containerPort: 8080\n          protocol: TCP\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: apps/v1\nkind: Deployment\nmetadata:\nname: test-deployment\nspec:\ntemplate:\nspec:\ncontainers:\n- image: test-image\nname: test-deployment\nports:\n- containerPort: 8080\nprotocol: UDP\nname: UDP-name-patch\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "list map keys - replace port name",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n name: test-deployment\nspec:\n template:\n   spec:\n     containers:\n     - image: test-image\n       name: test-deployment\n       ports:\n       - containerPort: 8080\n         protocol: UDP\n         name: UDP-name-original\n       - containerPort: 8080\n         protocol: TCP\n         name: TCP-name-original\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test-deployment\nspec:\n  template:\n    spec:\n      containers:\n      - image: test-image\n        name: test-deployment\n        ports:\n        - containerPort: 8080\n          protocol: UDP\n          name: UDP-name-patch\n        - containerPort: 8080\n          protocol: TCP\n          name: TCP-name-original\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: apps/v1\nkind: Deployment\nmetadata:\nname: test-deployment\nspec:\ntemplate:\nspec:\ncontainers:\n- image: test-image\nname: test-deployment\nports:\n- containerPort: 8080\nprotocol: UDP\nname: UDP-name-patch\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "list map keys - add a port, no protocol",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n name: test-deployment\nspec:\n template:\n   spec:\n     containers:\n     - image: test-image\n       name: test-deployment\n       ports:\n       - containerPort: 8080\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test-deployment\nspec:\n  template:\n    spec:\n      containers:\n      - image: test-image\n        name: test-deployment\n        ports:\n        - containerPort: 80\n        - containerPort: 8080\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: apps/v1\nkind: Deployment\nmetadata:\nname: test-deployment\nspec:\ntemplate:\nspec:\ncontainers:\n- image: test-image\nname: test-deployment\nports:\n- containerPort: 80\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "list map keys - protocol only present on some ports",
+      "input": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test-deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: consul\n        image: \"dashicorp/consul:1.9.1\"\n        ports:\n        - containerPort: 8500\n          name: http\n        - containerPort: 8301\n          protocol: \"TCP\"\n        - containerPort: 8301\n          protocol: \"UDP\"\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test-deployment\n  labels:\n    test: label\nspec:\n  template:\n    spec:\n      containers:\n      - name: consul\n        image: \"dashicorp/consul:1.9.1\"\n        ports:\n        - containerPort: 8500\n          name: http\n        - containerPort: 8301\n          protocol: \"TCP\"\n        - containerPort: 8301\n          protocol: \"UDP\"\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: apps/v1\nkind: Deployment\nmetadata:\nname: test-deployment\nlabels:\ntest: label\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "should retain existing null values in targets",
+      "input": "apiVersion: helm.toolkit.fluxcd.io/v2beta1\nkind: HelmRelease\nmetadata:\n  name: chart\nspec:\n  releaseName: helm-chart\n  timeout: 15m\n  values:\n    chart:\n      replicaCount: null\n      autoscaling: true\n",
+      "expected": "apiVersion: helm.toolkit.fluxcd.io/v2beta1\nkind: HelmRelease\nmetadata:\n  name: chart\nspec:\n  releaseName: helm-chart\n  timeout: 15m\n  values:\n    chart:\n      replicaCount: null\n      autoscaling: true\n    deepgram-api:\n      some: value\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: helm.toolkit.fluxcd.io/v2beta1\nkind: HelmRelease\nmetadata:\nname: chart\nspec:\nreleaseName: helm-chart\ntimeout: 15m\nvalues:\ndeepgram-api:\nsome: value\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "support numeric keys",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: blabla\n  namespace: blabla-ns\ndata:\n  \"6443\": \"foobar\"\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: blabla\n  namespace: blabla-ns\ndata:\n  \"6443\": \"barfoo\"\n  \"9110\": \"foo-foo\"\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: v1\nkind: ConfigMap\nmetadata:\nname: blabla\nnamespace: blabla-ns\ndata:\n\"6443\": \"barfoo\"\n\"9110\": \"foo-foo\"\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "honor different key style one",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: blabla\n  namespace: blabla-ns\ndata:\n  '6443': \"foobar\"\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: blabla\n  namespace: blabla-ns\ndata:\n  '6443': \"barfoo\"\n  9110: \"foo-foo\"\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: v1\nkind: ConfigMap\nmetadata:\nname: blabla\nnamespace: blabla-ns\ndata:\n\"6443\": \"barfoo\"\n9110: \"foo-foo\"\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "honor different key style two",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: blabla\n  namespace: blabla-ns\ndata:\n  \"6443\": \"foobar\"\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: blabla\n  namespace: blabla-ns\ndata:\n  \"6443\": \"barfoo\"\n  '9110': \"foo-foo\"\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: v1\nkind: ConfigMap\nmetadata:\nname: blabla\nnamespace: blabla-ns\ndata:\n\"6443\": \"barfoo\"\n'9110': \"foo-foo\"\n`),\nexpected: <expected>,"
+    },
+    {
+      "name": "different key types",
+      "input": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: blabla\n  namespace: blabla-ns\ndata:\n  \"6443\": \"key-string-double-quoted\"\n",
+      "expected": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: blabla\n  namespace: blabla-ns\ndata:\n  \"6443\": \"key-int\"\n",
+      "go": "input: <input>,\npatch: yaml.MustParse(`\napiVersion: v1\nkind: ConfigMap\nmetadata:\nname: blabla\nnamespace: blabla-ns\ndata:\n6443: \"key-int\"\n`),\nexpected: <expected>,"
+    }
+  ]
+}

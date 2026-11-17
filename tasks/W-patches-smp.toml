@@ -1,0 +1,30 @@
+id = "W-patches-smp"
+title = "Strategic merge patches (patchesStrategicMerge and patches)"
+status = "todo"
+owner = "worker"
+difficulty = 3
+order = 165
+depends_on = ["L-smp-merge", "W-selector"]
+summary = '''
+Wire `src/smp.rs` into `patchesStrategicMerge` (target = the patch's own kind/name/namespace) and the SMP branch of `patches` (target selector, or the patch's own id). Inline patches and patch files.
+'''
+
+[context]
+upstream = [
+  "kustomize:api/internal/builtins/PatchStrategicMergeTransformer.go",
+  "kustomize:api/internal/builtins/PatchTransformer.go#Transform,transformStrategicMerge",
+  "kustomize:api/filters/patchstrategicmerge/patchstrategicmerge.go"
+]
+read = ["src/smp.rs", "src/selector.rs", "src/transformers/mod.rs", "src/resource.rs", "src/fieldspec.rs", "src/setters.rs", "src/config.rs"]
+units = ["patchstrategicmerge_filter"]
+cases = ["multiplepatch/", "inlinepatch/", "simple/"]
+max_examples = 2
+budget = 14000
+
+[scope]
+write = ["src/transformers/patch_smp.rs", "src/transformers/mod.rs", "src/kustomization.rs", "src/build.rs"]
+
+[accept]
+tests = ["transformers::patch_smp::", "upstream_patchstrategicmerge"]
+cases = []
+min_new_passes = 3

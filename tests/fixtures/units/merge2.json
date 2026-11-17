@@ -1,0 +1,554 @@
+{
+  "upstream": "kyaml/yaml/merge2",
+  "cases": [
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "merge Element -- keep field in dest",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v0\n        command: ['run.sh']\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n        command: ['run.sh']\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "merge Element -- add field to dest",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n        command: ['run.sh']\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v0\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n        command: ['run.sh']\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "merge Element -- add list, empty in dest",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n        command: ['run.sh']\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers: []\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n        command: ['run.sh']\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "merge Element -- add list, missing from dest",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n        command: ['run.sh']\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n        command: ['run.sh']\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "merge Element -- add Element first",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n      - name: foo\n        image: foo:v1\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v0\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "merge Element -- add Element second",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v0\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "merge Element -- add Element third",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n      - name: foo\n        image: foo:v1\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v0\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n      - name: foo\n        image: foo:v1\n",
+      "prepend": true,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "merge Element -- add Element fourth",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v0\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n",
+      "prepend": true,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "keep list -- list missing from src",
+      "source": "apiVersion: apps/v1\nkind: Deployment\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "keep Element -- element missing in src",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v0\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "keep element -- empty list in src",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers: []\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "remove Element -- null in src",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers: null\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:v1\n      - name: bar\n        image: bar:v1\n        command: ['run2.sh']\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec: {}\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "infer merge keys merge'",
+      "source": "apiVersion: custom\nkind: Deployment\ncontainers:\n- name: foo\n  command: ['run2.sh']\n",
+      "dest": "apiVersion: custom\nkind: Deployment\ncontainers:\n- name: foo\n  image: foo:bar\n",
+      "expected": "apiVersion: custom\nkind: Deployment\ncontainers:\n- name: foo\n  image: foo:bar\n  command: ['run2.sh']\n",
+      "prepend": false,
+      "infer": true
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "no infer merge keys merge using schema",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        command: ['run2.sh']\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:bar\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo\n        image: foo:bar\n        command: ['run2.sh']\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "no infer merge keys merge using explicit schema as line comment'",
+      "source": "apiVersion: custom\nkind: Deployment\ncontainers:\n- name: foo\n  command: ['run2.sh']\n",
+      "dest": "apiVersion: custom\nkind: Deployment\ncontainers: # {\"items\":{\"$ref\": \"#/definitions/io.k8s.api.core.v1.Container\"},\"type\":\"array\",\"x-kubernetes-patch-merge-key\":\"name\",\"x-kubernetes-patch-strategy\": \"merge\"}\n- name: foo # hell ow\n  image: foo:bar\n",
+      "expected": "apiVersion: custom\nkind: Deployment\ncontainers: # {\"items\":{\"$ref\": \"#/definitions/io.k8s.api.core.v1.Container\"},\"type\":\"array\",\"x-kubernetes-patch-merge-key\":\"name\",\"x-kubernetes-patch-strategy\": \"merge\"}\n- name: foo\n  image: foo:bar\n  command: ['run2.sh']\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "merge_primitive_finalizers",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  finalizers:\n  - a\n  - b \n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  finalizers:\n  - b\n  - c\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  finalizers:\n  - b\n  - c\n  - a\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/element_test.go",
+      "description": "merge_primitive_items",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nitems: # {\"type\":\"array\", \"x-kubernetes-patch-strategy\": \"merge\"}\n- a\n- b\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nitems:\n- b\n- c\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nitems:\n- b\n- c\n- a\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "strategic merge patch delete 1",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo1\n        $patch: delete\n      - name: foo2\n      - name: foo3\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo1\n      - name: foo2\n      - name: foo3\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo2\n      - name: foo3\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "strategic merge patch delete 2",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo1\n      - name: foo2\n      - name: foo3\n        $patch: delete\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo1\n      - name: foo2\n      - name: foo3\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo1\n      - name: foo2\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "merge k8s deployment containers - prepend",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo1\n      - name: foo2\n      - name: foo3\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo0\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo1\n      - name: foo2\n      - name: foo3\n      - name: foo0\n      \n",
+      "prepend": true,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "merge k8s deployment containers - append",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo1\n      - name: foo2\n      - name: foo3\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo0\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n      - name: foo0\n      - name: foo1\n      - name: foo2\n      - name: foo3\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "merge k8s deployment volumes - append",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      volumes:\n      - name: foo1\n      - name: foo2\n      - name: foo3\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      volumes:\n      - name: foo0\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      volumes:\n      - name: foo0\n      - name: foo1\n      - name: foo2\n      - name: foo3\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "merge k8s deployment volumes - prepend",
+      "source": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      volumes:\n      - name: foo1\n      - name: foo2\n      - name: foo3\n",
+      "dest": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      volumes:\n      - name: foo0\n",
+      "expected": "apiVersion: apps/v1\nkind: Deployment\nspec:\n  template:\n    spec:\n      volumes:\n      - name: foo1\n      - name: foo2\n      - name: foo3\n      - name: foo0\n",
+      "prepend": true,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "merge k8s deployment containers -- $patch directive",
+      "source": "    apiVersion: apps/v1\n    kind: Deployment\n    spec:\n      template:\n        spec:\n          containers:\n          - name: foo1\n          - name: foo2\n          - name: foo3\n          - $patch: merge\n",
+      "dest": "    apiVersion: apps/v1\n    kind: Deployment\n    spec:\n      template:\n        spec:\n          containers:\n          - name: foo4\n          - name: foo5\n",
+      "expected": "    apiVersion: apps/v1\n    kind: Deployment\n    spec:\n      template:\n        spec:\n          containers:\n          - name: foo1\n          - name: foo2\n          - name: foo3\n          - name: foo4\n          - name: foo5\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "replace k8s deployment containers -- $patch directive",
+      "source": "    apiVersion: apps/v1\n    kind: Deployment\n    spec:\n      template:\n        spec:\n          containers:\n          - name: foo1\n          - name: foo2\n          - name: foo3\n          - $patch: replace\n",
+      "dest": "    apiVersion: apps/v1\n    kind: Deployment\n    spec:\n      template:\n        spec:\n          containers:\n          - name: foo4\n          - name: foo5\n",
+      "expected": "    apiVersion: apps/v1\n    kind: Deployment\n    spec:\n      template:\n        spec:\n          containers:\n          - name: foo1\n          - name: foo2\n          - name: foo3\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "remove k8s deployment containers -- $patch directive",
+      "source": "    apiVersion: apps/v1\n    kind: Deployment\n    spec:\n      template:\n        spec:\n          containers:\n          - name: foo1\n          - name: foo2\n          - name: foo3\n          - $patch: delete\n",
+      "dest": "    apiVersion: apps/v1\n    kind: Deployment\n    spec:\n      template:\n        spec:\n          containers:\n          - name: foo4\n          - name: foo5\n",
+      "expected": "    apiVersion: apps/v1\n    kind: Deployment\n    spec:\n      template:\n        spec: {}\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "replace List -- different value in dest",
+      "source": "kind: Deployment\nitems:\n- 1\n- 2\n- 3\n",
+      "dest": "kind: Deployment\nitems:\n- 0\n- 1\n",
+      "expected": "kind: Deployment\nitems:\n- 1\n- 2\n- 3\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "replace List -- missing from dest",
+      "source": "kind: Deployment\nitems:\n- 1\n- 2\n- 3\n",
+      "dest": "kind: Deployment\n",
+      "expected": "kind: Deployment\nitems:\n- 1\n- 2\n- 3\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "keep List -- same value in src and dest",
+      "source": "kind: Deployment\nitems:\n- 1\n- 2\n- 3\n",
+      "dest": "kind: Deployment\nitems:\n- 1\n- 2\n- 3\n",
+      "expected": "kind: Deployment\nitems:\n- 1\n- 2\n- 3\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "keep List -- unspecified in src",
+      "source": "kind: Deployment\n",
+      "dest": "kind: Deployment\nitems:\n- 1\n- 2\n- 3\n",
+      "expected": "kind: Deployment\nitems:\n- 1\n- 2\n- 3\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "remove List -- null in src",
+      "source": "kind: Deployment\nitems: null\n",
+      "dest": "kind: Deployment\nitems:\n- 1\n- 2\n- 3\n",
+      "expected": "kind: Deployment\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/list_test.go",
+      "description": "remove list -- empty in src",
+      "source": "kind: Deployment\nitems: []\n",
+      "dest": "kind: Deployment\nitems:\n- 1\n- 2\n- 3\n",
+      "expected": "kind: Deployment\nitems: []\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "strategic merge patch delete 1",
+      "source": "kind: Deployment\n$patch: delete\n",
+      "dest": "kind: Deployment\nspec:\n  foo: bar1\n",
+      "expected": "\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "strategic merge patch delete 2",
+      "source": "kind: Deployment\nspec:\n  $patch: delete\n",
+      "dest": "kind: Deployment\nspec:\n  foo: bar\n  color: red\n",
+      "expected": "kind: Deployment\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "strategic merge patch delete 3",
+      "source": "kind: Deployment\nspec:\n  metadata:\n    name: wut\n  template:\n    $patch: delete\n",
+      "dest": "kind: Deployment\nspec:\n  metadata:\n    name: wut\n  template:\n    spec:\n      containers:\n      - name: foo\n      - name: bar\n",
+      "expected": "kind: Deployment\nspec:\n  metadata:\n    name: wut\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "strategic merge patch delete 4",
+      "source": "apiVersion: apps/v1\nmetadata:\n  name: myDeploy\nkind: Deployment\n$patch: delete\n",
+      "dest": "apiVersion: apps/v1\nmetadata:\n  name: myDeploy\nkind: Deployment\nspec:\n  replica: 2\n  template:\n    metadata:\n      labels:\n        old-label: old-value\n    spec:\n      containers:\n      - name: nginx\n        image: nginx\n",
+      "expected": "\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "strategic merge patch replace 1",
+      "source": "kind: Deployment\nspec:\n  metal: heavy\n  $patch: replace\n  veggie: carrot\n",
+      "dest": "kind: Deployment\nspec:\n  river: nile\n  color: red\n",
+      "expected": "kind: Deployment\nspec:\n  metal: heavy\n  veggie: carrot\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "merge Map -- update field in dest",
+      "source": "kind: Deployment\nspec:\n  foo: bar1\n",
+      "dest": "kind: Deployment\nspec:\n  foo: bar0\n  baz: buz\n",
+      "expected": "kind: Deployment\nspec:\n  foo: bar1\n  baz: buz\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "merge Map -- add field to dest",
+      "source": "kind: Deployment\nspec:\n  foo: bar1\n  baz: buz\n",
+      "dest": "kind: Deployment\nspec:\n  foo: bar0\n",
+      "expected": "kind: Deployment\nspec:\n  foo: bar1\n  baz: buz\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "merge Map -- add list, empty in dest",
+      "source": "kind: Deployment\nspec:\n  foo: bar1\n  baz: buz\n",
+      "dest": "kind: Deployment\nspec: {}\n",
+      "expected": "kind: Deployment\nspec:\n  baz: buz\n  foo: bar1\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "merge Map -- add list, missing from dest",
+      "source": "kind: Deployment\nspec:\n  foo: bar1\n  baz: buz\n",
+      "dest": "kind: Deployment\n",
+      "expected": "kind: Deployment\nspec:\n  foo: bar1\n  baz: buz\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "merge Map -- add Map first",
+      "source": "kind: Deployment\nspec:\n  foo: bar1\n  baz: buz\n",
+      "dest": "kind: Deployment\nspec:\n  foo: bar1\n",
+      "expected": "kind: Deployment\nspec:\n  foo: bar1\n  baz: buz\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "merge Map -- add Map second",
+      "source": "kind: Deployment\nspec:\n  baz: buz\n  foo: bar1\n",
+      "dest": "kind: Deployment\nspec:\n  foo: bar1\n",
+      "expected": "kind: Deployment\nspec:\n  foo: bar1\n  baz: buz\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "keep map -- map missing from src",
+      "source": "kind: Deployment\n",
+      "dest": "kind: Deployment\nspec:\n  foo: bar1\n  baz: buz\n",
+      "expected": "kind: Deployment\nspec:\n  foo: bar1\n  baz: buz\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "keep map -- empty list in src",
+      "source": "kind: Deployment\nitems: {}\n",
+      "dest": "kind: Deployment\nspec:\n  foo: bar1\n  baz: buz\n",
+      "expected": "kind: Deployment\nspec:\n  foo: bar1\n  baz: buz\nitems: {}\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "remove Map -- null in src",
+      "source": "kind: Deployment\nspec: null\n",
+      "dest": "kind: Deployment\nspec:\n  foo: bar1\n  baz: buz\n",
+      "expected": "kind: Deployment\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "port patch has no protocol",
+      "source": "apiVersion: v1\nkind: Service\nmetadata:\n  name: web\nspec:\n  ports:\n    - port: 30900\n      targetPort: 30900\n",
+      "dest": "apiVersion: v1\nkind: Service\nmetadata:\n  name: web\nspec:\n  ports:\n    - port: 30900\n      targetPort: 30900\n      protocol: TCP\n",
+      "expected": "apiVersion: v1\nkind: Service\nmetadata:\n  name: web\nspec:\n  ports:\n    - port: 30900\n      targetPort: 30900\n      protocol: TCP\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "port patch has no protocol and different port number",
+      "source": "apiVersion: v1\nkind: Service\nmetadata:\n  name: web\nspec:\n  ports:\n    - port: 30901\n      targetPort: 30901\n",
+      "dest": "apiVersion: v1\nkind: Service\nmetadata:\n  name: web\nspec:\n  ports:\n    - port: 30900\n      targetPort: 30900\n      protocol: TCP\n",
+      "expected": "apiVersion: v1\nkind: Service\nmetadata:\n  name: web\nspec:\n  ports:\n    - port: 30900\n      targetPort: 30900\n      protocol: TCP\n    - port: 30901\n      targetPort: 30901\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/map_test.go",
+      "description": "Verify key style behavior",
+      "source": "kind: Deployment\nspec:\n  source-and-dest: source-and-dest\n  source-only: source-only\n  \"source-only-key-double-quoted\": source-only\n  source-and-dest-key-style-diff-1: source-and-dest\n  'source-and-dest-key-style-diff-2': source-and-dest\n  \"source-and-dest-key-style-diff-3\": source-and-dest\n",
+      "dest": "kind: Deployment\nspec:\n  source-and-dest: source-and-dest\n  'source-and-dest-key-style-diff-1': source-and-dest\n  \"source-and-dest-key-style-diff-2\": source-and-dest\n  source-and-dest-key-style-diff-3: source-and-dest\n  dest-only: dest-only\n  'dest-only-key-single-quoted': dest-only \n",
+      "expected": "kind: Deployment\nspec:\n  source-and-dest: source-and-dest\n  'source-and-dest-key-style-diff-1': source-and-dest\n  \"source-and-dest-key-style-diff-2\": source-and-dest\n  source-and-dest-key-style-diff-3: source-and-dest\n  dest-only: dest-only\n  'dest-only-key-single-quoted': dest-only \n  source-only: source-only\n  \"source-only-key-double-quoted\": source-only\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/scalar_test.go",
+      "description": "replace scalar -- different value in dest",
+      "source": "kind: Deployment\nfield: value1\n",
+      "dest": "kind: Deployment\nfield: value0\n",
+      "expected": "kind: Deployment\nfield: value1\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/scalar_test.go",
+      "description": "replace scalar -- missing from dest",
+      "source": "kind: Deployment\nfield: value1\n",
+      "dest": "kind: Deployment\n",
+      "expected": "kind: Deployment\nfield: value1\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/scalar_test.go",
+      "description": "keep scalar -- same value in src and dest",
+      "source": "kind: Deployment\nfield: value1\n",
+      "dest": "kind: Deployment\nfield: value1\n",
+      "expected": "kind: Deployment\nfield: value1\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/scalar_test.go",
+      "description": "keep scalar -- unspecified in src",
+      "source": "kind: Deployment\n",
+      "dest": "kind: Deployment\nfield: value1\n",
+      "expected": "kind: Deployment\nfield: value1\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/scalar_test.go",
+      "description": "remove scalar -- null in src",
+      "source": "kind: Deployment\nfield: null\n",
+      "dest": "kind: Deployment\nfield: value1\n",
+      "expected": "kind: Deployment\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/scalar_test.go",
+      "description": "remove scalar -- empty in src",
+      "source": "kind: Deployment\nfield:\n",
+      "dest": "kind: Deployment\nfield: value1\n",
+      "expected": "kind: Deployment\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/scalar_test.go",
+      "description": "remove scalar -- null in src, missing in dest",
+      "source": "kind: Deployment\nfield: null\n",
+      "dest": "kind: Deployment\n",
+      "expected": "kind: Deployment\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/scalar_test.go",
+      "description": "remove scalar -- null in src, empty in dest",
+      "source": "kind: Deployment\nfield: null\n",
+      "dest": "kind: Deployment\nfield:\n",
+      "expected": "kind: Deployment\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/scalar_test.go",
+      "description": "remove scalar -- null in src, null in dest",
+      "source": "kind: Deployment\nfield: null\n",
+      "dest": "kind: Deployment\nfield: null\n",
+      "expected": "kind: Deployment\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/scalar_test.go",
+      "description": "keep scalar -- missing in src, null in dest",
+      "source": "kind: Deployment\n",
+      "dest": "kind: Deployment\nfield: null\n",
+      "expected": "kind: Deployment\nfield: null\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/scalar_test.go",
+      "description": "keep scalar -- missing in src, null in dest, preserves null marker",
+      "source": "kind: Deployment\n",
+      "dest": "kind: Deployment\nfield: ~\n",
+      "expected": "kind: Deployment\nfield: ~\n",
+      "prepend": false,
+      "infer": false
+    },
+    {
+      "file": "kyaml/yaml/merge2/scalar_test.go",
+      "description": "merge an empty value",
+      "source": "kind: Deployment\nfield: {}\n",
+      "dest": "kind: Deployment\n",
+      "expected": "kind: Deployment\nfield: {}\n",
+      "prepend": false,
+      "infer": false
+    }
+  ]
+}

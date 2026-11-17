@@ -1,0 +1,36 @@
+id = "L-nameref"
+title = "Name references: renames propagate to referrers"
+status = "todo"
+owner = "lead"
+difficulty = 5
+order = 50
+depends_on = ["L-fieldspec", "W-prefix-suffix"]
+summary = '''
+After all transformers (and hash suffixes) ran, fix every field that refers to a renamed resource, using the `namereference.yaml` table: a ConfigMap renamed to `p-cm-hash` updates the Deployment volumes that referenced `cm`. Port `filters/nameref` and `FixBackReferences` into `src/nameref.rs`, using the rename lineage (`previous ids`) the framework keeps on each Resource.
+'''
+notes = '''
+Candidate selection is the hard part: same namespace as the referrer, prefix/suffix lineage equality, roleRef/subjects special cases, and the ambiguity error when several candidates remain. Port the sieve functions one by one with a unit test each.
+Also covers blankvalues/: a RoleBinding subject with a blank namespace is an error
+('Invalid Input: namespace is blank for resource ...'), raised in
+reswrangler.getNamespacesForRoleBinding.
+'''
+
+[context]
+upstream = [
+  "kustomize:api/filters/nameref/nameref.go",
+  "kustomize:api/internal/accumulator/namereferencetransformer.go",
+  "kustomize:api/resmap/reswrangler.go#SubsetThatCouldBeReferencedByResource,getNamespacesForRoleBinding"
+]
+read = ["src/fieldspec.rs", "src/resource.rs", "src/setters.rs", "src/config.rs"]
+units = ["nameref_filter"]
+cases = ["namereference/", "nameupdateinroleref/", "rolebindingacrossnamespace/"]
+max_examples = 2
+budget = 20000
+
+[scope]
+write = ["src/nameref.rs", "src/lib.rs", "src/build.rs", "src/resource.rs"]
+
+[accept]
+tests = ["nameref::", "upstream_nameref"]
+cases = []
+min_new_passes = 3

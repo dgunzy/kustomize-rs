@@ -1,0 +1,131 @@
+{
+  "upstream": "api/filters/imagetag/imagetag_test.go",
+  "cases": [
+    {
+      "name": "ignore CustomResourceDefinition",
+      "input": "apiVersion: apiextensions.k8s.io/v1\nkind: CustomResourceDefinition\nmetadata:\n  name: whatever\nspec:\n  containers:\n  - image: whatever\n",
+      "expectedOutput": "apiVersion: apiextensions.k8s.io/v1\nkind: CustomResourceDefinition\nmetadata:\n  name: whatever\nspec:\n  containers:\n  - image: whatever\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"whatever\",\nNewName: \"theImageShouldNotChangeInACrd\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/containers/image\",\n},\n},"
+    },
+    {
+      "name": "legacy multiple images in containers",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  containers:\n  - image: nginx:1.2.1\n  - image: nginx:2.1.2\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  containers:\n  - image: apache@12345\n  - image: apache@12345\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"apache\",\nDigest:  \"12345\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/containers/image\",\n},\n},"
+    },
+    {
+      "name": "legacy both containers and initContainers",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  containers:\n  - image: nginx:1.2.1\n  - image: tomcat:1.2.3\n  initContainers:\n  - image: nginx:1.2.1\n  - image: apache:1.2.3\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  containers:\n  - image: apache:3.2.1\n  - image: tomcat:1.2.3\n  initContainers:\n  - image: apache:3.2.1\n  - image: apache:1.2.3\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"apache\",\nNewTag:  \"3.2.1\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/containers/image\",\n},\n{\nPath: \"spec/initContainers/image\",\n},\n},"
+    },
+    {
+      "name": "legacy updates at multiple depths",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  containers:\n  - image: nginx:1.2.1\n  - image: tomcat:1.2.3\n  template:\n    spec:\n      initContainers:\n      - image: nginx:1.2.1\n      - image: apache:1.2.3\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  containers:\n  - image: apache:3.2.1\n  - image: tomcat:1.2.3\n  template:\n    spec:\n      initContainers:\n      - image: apache:3.2.1\n      - image: apache:1.2.3\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"apache\",\nNewTag:  \"3.2.1\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/containers/image\",\n},\n{\nPath: \"spec/template/spec/initContainers/image\",\n},\n},"
+    },
+    {
+      "name": "update with digest",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  image: nginx:1.2.1\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  image: apache@12345\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"apache\",\nDigest:  \"12345\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/image\",\n},\n},"
+    },
+    {
+      "name": "multiple matches in sequence",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  containers:\n  - image: nginx:1.2.1\n  - image: not_nginx@54321\n  - image: nginx:1.2.1\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  containers:\n  - image: apache:3.2.1\n  - image: not_nginx@54321\n  - image: apache:3.2.1\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"apache\",\nNewTag:  \"3.2.1\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/containers/image\",\n},\n},"
+    },
+    {
+      "name": "new Tag",
+      "input": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:latest\n        name: nginx-latest\n      - image: foobar:1\n        name: replaced-with-digest\n      - image: postgres:1.8.0\n        name: postgresdb\n      initContainers:\n      - image: nginx\n        name: nginx-notag\n      - image: nginx@sha256:111111111111111111\n        name: nginx-sha256\n      - image: alpine:1.8.0\n        name: init-alpine\n",
+      "expectedOutput": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:v2\n        name: nginx-tagged\n      - image: nginx:v2\n        name: nginx-latest\n      - image: foobar:1\n        name: replaced-with-digest\n      - image: postgres:1.8.0\n        name: postgresdb\n      initContainers:\n      - image: nginx:v2\n        name: nginx-notag\n      - image: nginx:v2\n        name: nginx-sha256\n      - image: alpine:1.8.0\n        name: init-alpine\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:   \"nginx\",\nNewTag: \"v2\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/template/spec/containers[]/image\",\n},\n{\nPath: \"spec/template/spec/initContainers[]/image\",\n},\n},"
+    },
+    {
+      "name": "newImage",
+      "input": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:latest\n        name: nginx-latest\n      - image: foobar:1\n        name: replaced-with-digest\n      - image: postgres:1.8.0\n        name: postgresdb\n      initContainers:\n      - image: nginx\n        name: nginx-notag\n      - image: nginx@sha256:111111111111111111\n        name: nginx-sha256\n      - image: alpine:1.8.0\n        name: init-alpine\n",
+      "expectedOutput": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: busybox:1.7.9\n        name: nginx-tagged\n      - image: busybox:latest\n        name: nginx-latest\n      - image: foobar:1\n        name: replaced-with-digest\n      - image: postgres:1.8.0\n        name: postgresdb\n      initContainers:\n      - image: busybox\n        name: nginx-notag\n      - image: busybox@sha256:111111111111111111\n        name: nginx-sha256\n      - image: alpine:1.8.0\n        name: init-alpine\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"busybox\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/template/spec/containers[]/image\",\n},\n{\nPath: \"spec/template/spec/initContainers[]/image\",\n},\n},"
+    },
+    {
+      "name": "newImageAndTag",
+      "input": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:latest\n        name: nginx-latest\n      - image: foobar:1\n        name: replaced-with-digest\n      - image: postgres:1.8.0\n        name: postgresdb\n      initContainers:\n      - image: nginx\n        name: nginx-notag\n      - image: nginx@sha256:111111111111111111\n        name: nginx-sha256\n      - image: alpine:1.8.0\n        name: init-alpine\n",
+      "expectedOutput": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: busybox:v3\n        name: nginx-tagged\n      - image: busybox:v3\n        name: nginx-latest\n      - image: foobar:1\n        name: replaced-with-digest\n      - image: postgres:1.8.0\n        name: postgresdb\n      initContainers:\n      - image: busybox:v3\n        name: nginx-notag\n      - image: busybox:v3\n        name: nginx-sha256\n      - image: alpine:1.8.0\n        name: init-alpine\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"busybox\",\nNewTag:  \"v3\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/template/spec/containers[]/image\",\n},\n{\nPath: \"spec/template/spec/initContainers[]/image\",\n},\n},"
+    },
+    {
+      "name": "newDigest",
+      "input": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:latest\n        name: nginx-latest\n      - image: foobar:1\n        name: replaced-with-digest\n      - image: postgres:1.8.0\n        name: postgresdb\n      initContainers:\n      - image: nginx\n        name: nginx-notag\n      - image: nginx@sha256:111111111111111111\n        name: nginx-sha256\n      - image: alpine:1.8.0\n        name: init-alpine\n",
+      "expectedOutput": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx@sha256:222222222222222222\n        name: nginx-tagged\n      - image: nginx@sha256:222222222222222222\n        name: nginx-latest\n      - image: foobar:1\n        name: replaced-with-digest\n      - image: postgres:1.8.0\n        name: postgresdb\n      initContainers:\n      - image: nginx@sha256:222222222222222222\n        name: nginx-notag\n      - image: nginx@sha256:222222222222222222\n        name: nginx-sha256\n      - image: alpine:1.8.0\n        name: init-alpine\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:   \"nginx\",\nDigest: \"sha256:222222222222222222\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/template/spec/containers/image\",\n},\n{\nPath: \"spec/template/spec/initContainers/image\",\n},\n},"
+    },
+    {
+      "name": "newImageAndDigest",
+      "input": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:latest\n        name: nginx-latest\n      - image: foobar:1\n        name: replaced-with-digest\n      - image: postgres:1.8.0\n        name: postgresdb\n      initContainers:\n      - image: nginx\n        name: nginx-notag\n      - image: nginx@sha256:111111111111111111\n        name: nginx-sha256\n      - image: alpine:1.8.0\n        name: init-alpine\n",
+      "expectedOutput": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: busybox@sha256:222222222222222222\n        name: nginx-tagged\n      - image: busybox@sha256:222222222222222222\n        name: nginx-latest\n      - image: foobar:1\n        name: replaced-with-digest\n      - image: postgres:1.8.0\n        name: postgresdb\n      initContainers:\n      - image: busybox@sha256:222222222222222222\n        name: nginx-notag\n      - image: busybox@sha256:222222222222222222\n        name: nginx-sha256\n      - image: alpine:1.8.0\n        name: init-alpine\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"busybox\",\nDigest:  \"sha256:222222222222222222\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/template/spec/containers[]/image\",\n},\n{\nPath: \"spec/template/spec/initContainers[]/image\",\n},\n},"
+    },
+    {
+      "name": "emptyContainers",
+      "input": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  containers:\n",
+      "expectedOutput": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  containers: []\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:   \"nginx\",\nNewTag: \"v2\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/containers[]/image\",\n//\t\t\t\t\tCreateIfNotPresent: true,\n},\n},"
+    },
+    {
+      "name": "tagWithBraces",
+      "input": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: some.registry.io/my-image:{GENERATED_TAG}\n        name: my-image\n",
+      "expectedOutput": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: some.registry.io/my-image:my-fixed-tag\n        name: my-image\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:   \"some.registry.io/my-image\",\nNewTag: \"my-fixed-tag\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/template/spec/containers[]/image\",\n},\n{\nPath: \"spec/template/spec/initContainers[]/image\",\n},\n},"
+    },
+    {
+      "name": "mutation tracker",
+      "input": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: nginx:1.7.9\n        name: nginx-tagged\n      - image: nginx:latest\n        name: nginx-latest\n      - image: foobar:1\n        name: replaced-with-digest\n      - image: postgres:1.8.0\n        name: postgresdb\n      initContainers:\n      - image: nginx\n        name: nginx-notag\n      - image: nginx@sha256:111111111111111111\n        name: nginx-sha256\n      - image: alpine:1.8.0\n        name: init-alpine\n",
+      "expectedOutput": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploy1\nspec:\n  template:\n    spec:\n      containers:\n      - image: busybox:v3\n        name: nginx-tagged\n      - image: busybox:v3\n        name: nginx-latest\n      - image: foobar:1\n        name: replaced-with-digest\n      - image: postgres:1.8.0\n        name: postgresdb\n      initContainers:\n      - image: busybox:v3\n        name: nginx-notag\n      - image: busybox:v3\n        name: nginx-sha256\n      - image: alpine:1.8.0\n        name: init-alpine\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"busybox\",\nNewTag:  \"v3\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/template/spec/containers[]/image\",\n},\n{\nPath: \"spec/template/spec/initContainers[]/image\",\n},\n},\nsetValueCallback: mutationTrackerStub.MutationTracker,\nexpectedSetValueArgs: []filtertest.SetValueArg{\n{\nValue:    \"busybox:v3\",\nNodePath: []string{\"spec\", \"template\", \"spec\", \"containers\", \"image\"},\n},\n{\nValue:    \"busybox:v3\",\nNodePath: []string{\"spec\", \"template\", \"spec\", \"containers\", \"image\"},\n},\n{\nValue:    \"busybox:v3\",\nNodePath: []string{\"spec\", \"template\", \"spec\", \"initContainers\", \"image\"},\n},\n{\nValue:    \"busybox:v3\",\nNodePath: []string{\"spec\", \"template\", \"spec\", \"initContainers\", \"image\"},\n},\n},"
+    },
+    {
+      "name": "image with tag and digest new name",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  image: nginx:1.2.1@sha256:46d5b90a7f4e9996351ad893a26bcbd27216676ad4d5316088ce351fb2c2c3dd\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  image: apache:1.2.1@sha256:46d5b90a7f4e9996351ad893a26bcbd27216676ad4d5316088ce351fb2c2c3dd\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"apache\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/image\",\n},\n},"
+    },
+    {
+      "name": "image with tag and digest new name new tag",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  image: nginx:1.2.1@sha256:46d5b90a7f4e9996351ad893a26bcbd27216676ad4d5316088ce351fb2c2c3dd\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  image: apache:1.3.0\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"apache\",\nNewTag:  \"1.3.0\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/image\",\n},\n},"
+    },
+    {
+      "name": "image with tag and digest new name new tag and digest",
+      "input": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  image: nginx:1.2.1@sha256:46d5b90a7f4e9996351ad893a26bcbd27216676ad4d5316088ce351fb2c2c3dd\n",
+      "expectedOutput": "apiVersion: example.com/v1\nkind: Foo\nmetadata:\n  name: instance\nspec:\n  image: apache:1.3.0@sha256:xyz\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"apache\",\nNewTag:  \"1.3.0\",\nDigest:  \"sha256:xyz\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/image\",\n},\n},"
+    },
+    {
+      "name": "updateimagesuffix",
+      "input": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploysuffix\nspec:\n  template:\n    spec:\n      containers:\n      - image: redis:6.2.6\n        name: redis\n",
+      "expectedOutput": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: deploysuffix\nspec:\n  template:\n    spec:\n      containers:\n      - image: redis:6.2.6-alpine\n        name: redis\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:      \"redis\",\nTagSuffix: \"-alpine\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/template/spec/containers[]/image\",\n},\n},"
+    },
+    {
+      "name": "update image volume in pod template",
+      "input": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: imagevolume\nspec:\n  template:\n    spec:\n      volumes:\n      - name: volume\n        image:\n          reference: nginx\n",
+      "expectedOutput": "group: apps\napiVersion: v1\nkind: Deployment\nmetadata:\n  name: imagevolume\nspec:\n  template:\n    spec:\n      volumes:\n      - name: volume\n        image:\n          reference: apache@12345\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"apache\",\nDigest:  \"12345\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/template/spec/volumes[]/image/reference\",\n},\n},"
+    },
+    {
+      "name": "update image volume in pod spec",
+      "input": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: imagevolume\nspec:\n  volumes:\n  - name: volume\n    image:\n      reference: nginx\n",
+      "expectedOutput": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: imagevolume\nspec:\n  volumes:\n  - name: volume\n    image:\n      reference: apache@12345\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"apache\",\nDigest:  \"12345\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/volumes[]/image/reference\",\n},\n},"
+    },
+    {
+      "name": "update image volume in cronjob",
+      "input": "apiVersion: batch/v1\nkind: CronJob\nmetadata:\n  name: imagevolume\nspec:\n  jobTemplate:\n    spec:\n      template:\n        spec:\n          volumes:\n          - name: volume\n            image:\n              reference: nginx\n",
+      "expectedOutput": "apiVersion: batch/v1\nkind: CronJob\nmetadata:\n  name: imagevolume\nspec:\n  jobTemplate:\n    spec:\n      template:\n        spec:\n          volumes:\n          - name: volume\n            image:\n              reference: apache@12345\n",
+      "go": "input: <input>,\nexpectedOutput: <expectedOutput>,\nfilter: Filter{\nImageTag: types.Image{\nName:    \"nginx\",\nNewName: \"apache\",\nDigest:  \"12345\",\n},\n},\nfsSlice: []types.FieldSpec{\n{\nPath: \"spec/jobTemplate/spec/template/spec/volumes[]/image/reference\",\n},\n},"
+    }
+  ]
+}

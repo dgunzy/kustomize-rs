@@ -26,8 +26,12 @@ test:
 audit:
     cargo audit
 
+# Tests for the delegation tooling (tools/krs.py; Python 3.11+, stdlib only)
+tools-test:
+    python3 -B tools/test_krs.py
+
 # Every verification step, in CI order
-verify: clippy audit test
+verify: clippy audit test tools-test
 
 # Format in place, then run every check
 ci: fmt verify
@@ -39,6 +43,14 @@ ci-check: fmt-check verify
 conformance:
     cargo test --test conformance
 
+# Fail if a case in conformance/baseline.txt no longer passes (the ratchet)
+regressions:
+    cargo test --test conformance -- --check-regressions --no-status
+
+# Record today's passing cases as the new baseline (after a reviewed improvement)
+baseline:
+    cargo test --test conformance -- --write-baseline
+
 # Run matching upstream cases with diffs, e.g. `just case namereference`
 case filter:
     cargo test --test conformance -- {{filter}} --verbose
@@ -46,6 +58,10 @@ case filter:
 # Re-record fixtures and field-spec tables from kustomize (needs go): `just import v5.8.0`
 import ref="master":
     scripts/import-upstream.sh {{ref}}
+
+# Delegation tool: `just krs status`, `just krs next`, `just krs brief <task>` ... (see delegation/README.md)
+krs *args:
+    python3 tools/krs.py {{args}}
 
 # Try the CLI against a directory: `just build path/to/overlay`
 build dir=".":
