@@ -1,0 +1,40 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- elasticsearch-dev-service.yaml
+- elasticsearch-test-service.yaml
+vars:
+- name: elasticsearch-test-service-name
+  objref:
+    kind: Service
+    name: elasticsearch
+    namespace: test
+    apiVersion: v1
+  fieldref:
+    fieldpath: metadata.name
+- name: elasticsearch-test-protocol
+  objref:
+    kind: Service
+    name: elasticsearch
+    namespace: test
+    apiVersion: v1
+  fieldref:
+    fieldpath: spec.ports[0].protocol
+- name: elasticsearch-dev-service-name
+  objref:
+    kind: Service
+    name: elasticsearch
+    namespace: dev
+    apiVersion: v1
+  fieldref:
+    fieldpath: metadata.name
+- name: elasticsearch-dev-protocol
+  objref:
+    kind: Service
+    name: elasticsearch
+    namespace: dev
+    apiVersion: v1
+  fieldref:
+    fieldpath: spec.ports[0].protocol

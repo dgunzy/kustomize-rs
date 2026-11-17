@@ -1,0 +1,2 @@
+Invalid Input: namespace is blank for resource "RoleBinding.v1.rbac.authorization.k8s.io/test.[noNs]"
+

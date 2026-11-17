@@ -1,0 +1,13 @@
+# Cases the conformance report sets aside: counted and listed, but not part of
+# the pass rate. "Deferred" means not now, not never. Remove an entry when the
+# feature is picked up.
+#
+# Cases recorded with `plugins: enabled` (exec/Go/KRM-function plugins, helm) or
+# `filesystem: onDisk` (input not captured) are deferred automatically.
+#
+# `prefix` matches the start of a case id (`<test file>/<TestName>/<NN>`).
+deferred:
+  - prefix: fnplugin/
+    reason: KRM function and exec plugins; Flux builds with plugins disabled
+  - prefix: managedbylabel/
+    reason: expected label embeds the upstream binary's version string

@@ -1,0 +1,18 @@
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: circus
+spec:
+  containers:
+  - name: ring
+    image: ring
+    command:
+    - echo
+    - "$(POD_NAME1)"
+    - "$(POD_NAME2)"
+    env:
+      - name: P1
+        value: "$(POD_NAME1)"
+      - name: P2
+        value: "$(POD_NAME2)"

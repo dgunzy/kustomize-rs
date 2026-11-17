@@ -1,0 +1,7 @@
+
+volumeClaimTemplateLabels:
+
+- path: spec/volumeClaimTemplates[]/metadata/labels
+  create: true
+  group: apps
+  kind: StatefulSet

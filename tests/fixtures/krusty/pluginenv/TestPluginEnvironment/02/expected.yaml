@@ -1,0 +1,8 @@
+apiVersion: v1
+env:
+  kustomize_plugin_config_root: /private/var/folders/1q/psj8yk_n0xl8hzv7rzrzcv8w0000gn/T/TestPluginEnvironment2194211335/001
+  kustomize_plugin_home: /private/tmp/claude-501/-Users-danguns-Kubernetes-flux9s/d22acfab-ff5e-487b-a2f8-8dc52125972f/scratchpad/kustomize/plugin
+  pwd: /private/var/folders/1q/psj8yk_n0xl8hzv7rzrzcv8w0000gn/T/TestPluginEnvironment2194211335/001
+kind: GeneratedEnv
+metadata:
+  name: hello

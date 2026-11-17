@@ -1,0 +1,6 @@
+
+resources:
+- service
+
+configMapGenerator:
+- name: "-example-configmap"

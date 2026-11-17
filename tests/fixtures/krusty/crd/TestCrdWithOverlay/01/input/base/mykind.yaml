@@ -1,0 +1,10 @@
+
+apiVersion: jingfang.example.com/v1
+kind: MyKind
+metadata:
+  name: mykind
+spec:
+  secretRef:
+    name: crdsecret
+  beeRef:
+    name: bee

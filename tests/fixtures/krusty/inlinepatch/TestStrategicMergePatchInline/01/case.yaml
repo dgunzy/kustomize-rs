@@ -1,0 +1,13 @@
+# Generated from upstream kustomize. Do not edit by hand.
+upstream:
+  file: "api/krusty/inlinepatch_test.go"
+  test: "TestStrategicMergePatchInline"
+run:
+  path: "base"
+  loadRestrictions: rootOnly
+  reorder: none
+  addManagedByLabel: false
+  plugins: disabled
+expect: output
+filesystem: inMemory
+asserted: true

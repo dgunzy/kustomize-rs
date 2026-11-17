@@ -1,0 +1,5 @@
+trouble configuring builtin PatchStrategicMergeTransformer with config: `
+paths:
+- ../patches/patchAddProbe.yaml
+- ../patches/patchDnsPolicy.yaml
+`: security; file '/patches/patchAddProbe.yaml' is not in or below '/prod'

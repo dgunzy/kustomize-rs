@@ -1,0 +1,12 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+patchesStrategicMerge:
+- patch.yaml
+resources:
+- ../base
+configMapGenerator:
+- name: overlayCm
+  literals:
+  - hello=world

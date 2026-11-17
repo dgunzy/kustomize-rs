@@ -1,0 +1,8 @@
+
+apiVersion: foo/v1
+kind: Gorilla
+metadata:
+  name: ursus
+spec:
+  diet: heston
+  location: Arizona

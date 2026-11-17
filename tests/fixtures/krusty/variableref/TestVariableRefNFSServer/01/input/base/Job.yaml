@@ -1,0 +1,23 @@
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi
+spec:
+  template:
+    spec:
+      containers:
+      - name: pi
+        image: perl
+        command: ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+        volumeMounts:
+        - mountPath: shared-files
+          name: nfs-files-vol
+      restartPolicy: Never
+      volumes:
+      - name: nfs-files-vol
+        nfs:
+          server: $(NFS_SERVER_SERVICE_NAME).default.srv.cluster.local
+          path: /
+          readOnly: false
+  backoffLimit: 4

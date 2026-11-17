@@ -1,0 +1,20 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namePrefix: xql-one-
+resources:
+- ../../../../bases/xql
+secretGenerator:
+- name: xql-secret
+  behavior: merge
+  envs:
+  - config/xql-one-secret.env
+vars:
+- name: PROJECT_XQL_ONE_SECRET_NAME
+  objref:
+    kind: Secret
+    name: xql-secret
+    apiVersion: v1
+  fieldref:
+    fieldpath: metadata.name

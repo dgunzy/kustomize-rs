@@ -1,0 +1,49 @@
+kustomize-rs
+Copyright 2026 Dan Guns
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+-------------------------------------------------------------------------------
+Third-party material
+-------------------------------------------------------------------------------
+
+This product includes material derived from kustomize
+(https://github.com/kubernetes-sigs/kustomize),
+Copyright The Kubernetes Authors,
+licensed under the Apache License, Version 2.0.
+A copy of that license is at tests/fixtures/krusty/LICENSE.kustomize.
+
+  - tests/fixtures/krusty/
+      Test inputs and expected outputs recorded by running kustomize's
+      api/krusty test suite with an added recorder. Modified: converted from
+      Go test code into data files. Source commit: tests/fixtures/krusty/UPSTREAM_COMMIT.
+  - src/builtin_config/
+      kustomize's default field-spec tables (api/internal/konfig/builtinpluginconsts).
+      Modified: extracted from Go string constants into YAML files.
+  - scripts/upstream/harness.patch
+      A patch to kustomize's api/testutils/kusttest test harness.
+  - Rust source files whose header says they are ported from kustomize.
+      Modified: translated from Go to Rust and adapted to this crate.
+
+This product includes material derived from Flux
+(https://github.com/fluxcd/pkg),
+Copyright The Flux authors,
+licensed under the Apache License, Version 2.0.
+A copy of that license is at tests/fixtures/flux/LICENSE.fluxcd-pkg.
+
+  - tests/fixtures/flux/testdata/
+      Test data from fluxcd/pkg/kustomize/testdata, copied unmodified.
+      Source commit: tests/fixtures/flux/UPSTREAM_COMMIT.
+  - Rust source files whose header says they are ported from Flux.
+      Modified: translated from Go to Rust and adapted to this crate.
+
+Neither kustomize nor Flux ships a NOTICE file of its own.
+
+-------------------------------------------------------------------------------
+Trademarks
+-------------------------------------------------------------------------------
+
+Kubernetes, kustomize and Flux are trademarks of The Linux Foundation. This
+project is not affiliated with or endorsed by The Linux Foundation, the Cloud
+Native Computing Foundation, the Kubernetes project or the Flux project. The
+names are used only to describe compatibility.

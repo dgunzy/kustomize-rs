@@ -1,0 +1,1 @@
+accumulating resources: accumulation err='accumulating resources from '../tolerations': '/tolerations' must resolve to a file': recursed merging from path '/tolerations': may not add resource with an already registered id: StatefulSet.v1.apps/my-sts.[noNs]

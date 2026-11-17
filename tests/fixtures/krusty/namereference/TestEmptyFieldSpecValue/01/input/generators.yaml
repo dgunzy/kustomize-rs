@@ -1,0 +1,9 @@
+
+apiVersion: builtin
+kind: ConfigMapGenerator
+metadata:
+  name: secret-example
+labels:
+  app.kubernetes.io/name: secret-example
+literals:
+- this_is_a_secret_name=

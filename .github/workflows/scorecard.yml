@@ -1,0 +1,58 @@
+name: OpenSSF Scorecard
+
+on:
+  # Re-run when branch protection changes (a graded Scorecard check).
+  branch_protection_rule:
+  # Weekly, plus on pushes that touch security-relevant files.
+  schedule:
+    - cron: "0 3 * * 1" # Monday 03:00 UTC
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "deny.toml"
+  workflow_dispatch:
+
+# Read-only by default; the analysis job elevates only what it needs.
+permissions: read-all
+
+concurrency:
+  group: scorecard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      # Upload results to the code-scanning dashboard.
+      security-events: write
+      # Publish results to the OpenSSF API (needed for the badge).
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run OpenSSF Scorecard
+        uses: ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e # v2.5.0
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          # Publishes to the OpenSSF API so the README badge resolves.
+          publish_results: true
+
+      - name: Upload SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        with:
+          sarif_file: results.sarif
+
+      - name: Upload SARIF as artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: scorecard-results
+          path: results.sarif
+          retention-days: 90

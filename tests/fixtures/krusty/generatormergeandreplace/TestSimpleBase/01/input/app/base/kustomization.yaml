@@ -1,0 +1,15 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namePrefix: team-foo-
+commonLabels:
+  app: mynginx
+  org: example.com
+  team: foo
+commonAnnotations:
+  note: This is a test annotation
+resources:
+  - service.yaml
+  - deployment.yaml
+  - networkpolicy.yaml

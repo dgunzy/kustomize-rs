@@ -1,0 +1,15 @@
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: grimaldi
+spec:
+  containers:
+  - name: dance
+    image: dance
+    command:
+    - echo
+    - "$(POD_NAME)"
+    env:
+      - name: FOO
+        value: "$(POD_NAME)"

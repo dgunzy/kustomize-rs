@@ -1,0 +1,36 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- service-a.yaml
+- service-b.yaml
+
+patchesJson6902:
+- path: service-a-patch.yaml
+  target:
+    version: v1
+    group: networking.k8s.io
+    kind: Ingress
+    name: service-a
+- path: service-b-patch.yaml
+  target:
+    version: v1
+    group: networking.k8s.io
+    kind: Ingress
+    name: service-b
+vars:
+- name: SERVICE_A_DNS_NAME
+  objref:
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    name: service-a
+  fieldref:
+    fieldpath: spec.rules[0].host
+- name: SERVICE_B_DNS_NAME
+  objref:
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    name: service-b
+  fieldref:
+    fieldpath: spec.rules[0].host

@@ -1,0 +1,27 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- workflow.yaml
+
+configurations:
+- kustomization-config.yaml
+
+configMapGenerator:
+- name: kustomize-vars
+  envs:
+  - vars.env
+
+vars:
+- name: DBT_TARGET
+  objref: &config-map-ref
+    kind: ConfigMap
+    name: kustomize-vars
+    version: v1
+  fieldref:
+    fieldpath: data.DBT_TARGET
+- name: SUSPENDED
+  objref: *config-map-ref
+  fieldref:
+    fieldpath: data.SUSPENDED

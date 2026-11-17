@@ -1,0 +1,8 @@
+
+images:
+- kind: Custom
+  path: spec/template/spec/myContainers[]/image
+- kind: Custom
+  path: spec2/template/spec/myContainers[]/image
+- kind: Custom
+  path: spec3/template/spec/myInitContainers[]/image

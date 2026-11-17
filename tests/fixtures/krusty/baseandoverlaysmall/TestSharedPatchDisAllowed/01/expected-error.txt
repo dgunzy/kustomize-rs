@@ -1,0 +1,4 @@
+trouble configuring builtin PatchStrategicMergeTransformer with config: `
+paths:
+- ../shared/deployment-patch.yaml
+`: security; file '/shared/deployment-patch.yaml' is not in or below '/overlay'

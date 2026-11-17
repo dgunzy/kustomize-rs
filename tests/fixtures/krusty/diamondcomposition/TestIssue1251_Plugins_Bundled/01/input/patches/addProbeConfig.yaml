@@ -1,0 +1,11 @@
+
+apiVersion: builtin
+kind: PatchJson6902Transformer
+metadata:
+  name: addProbe
+target:
+  group: apps
+  version: v1
+  kind: Deployment
+  name: my-deployment
+jsonOp: '[{"op": "replace", "path": "/spec/template/spec/containers/0", "value": { "image": "my-image", "livenessProbe": { "httpGet" : {"path": "/healthz", "port": 8080 } }, "name": "my-deployment"}}]'

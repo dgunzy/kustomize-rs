@@ -1,0 +1,2 @@
+Found multiple kustomization files under: /
+

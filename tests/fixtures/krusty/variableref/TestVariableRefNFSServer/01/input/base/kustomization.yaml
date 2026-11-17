@@ -1,0 +1,25 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- pv_pvc.yaml
+- nfs_deployment.yaml
+- nfs_service.yaml
+- Deployment.yaml
+- CronJob.yaml
+- DaemonSet.yaml
+- ReplicaSet.yaml
+- StatefulSet.yaml
+- Pod.yaml
+- Job.yaml
+- nfs_pv.yaml
+
+vars:
+- name: NFS_SERVER_SERVICE_NAME
+  objref:
+    kind: Service
+    name: nfs-server-service
+    apiVersion: v1
+  fieldref:
+    fieldpath: metadata.name

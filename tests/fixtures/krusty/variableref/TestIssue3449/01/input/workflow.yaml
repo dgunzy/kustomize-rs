@@ -1,0 +1,20 @@
+
+apiVersion: argoproj.io/v1alpha1
+kind: CronWorkflow
+metadata:
+  name: cron-core-load-workflow
+spec:
+  schedule: "45 2 * * *"
+  timezone: "Europe/Vienna"
+  concurrencyPolicy: Forbid
+  suspend: $(SUSPENDED)
+  workflowMetadata:
+    labels:
+      workflowName: core-load-workflow
+  workflowSpec:
+    workflowTemplateRef:
+      name: core-load-pipeline
+    arguments:
+      parameters:
+        - name: dbt_target
+          value: $(DBT_TARGET)

@@ -1,0 +1,6 @@
+
+kind: StatefulSet
+metadata:
+  name: myapp
+  labels:
+    test: label

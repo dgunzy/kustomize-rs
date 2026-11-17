@@ -1,0 +1,12 @@
+# Generated from upstream kustomize. Do not edit by hand.
+upstream:
+  file: "api/krusty/fnplugin_test.go"
+  test: "TestFnContainerMountsLoadRestrictions_root"
+run:
+  path: "."
+  loadRestrictions: rootOnly
+  reorder: none
+  addManagedByLabel: false
+  plugins: enabled
+expect: error
+filesystem: inMemory

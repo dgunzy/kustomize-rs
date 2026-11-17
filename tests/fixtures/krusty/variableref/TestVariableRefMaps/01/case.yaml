@@ -1,0 +1,13 @@
+# Generated from upstream kustomize. Do not edit by hand.
+upstream:
+  file: "api/krusty/variableref_test.go"
+  test: "TestVariableRefMaps"
+run:
+  path: "base"
+  loadRestrictions: rootOnly
+  reorder: none
+  addManagedByLabel: false
+  plugins: disabled
+expect: output
+filesystem: inMemory
+asserted: true

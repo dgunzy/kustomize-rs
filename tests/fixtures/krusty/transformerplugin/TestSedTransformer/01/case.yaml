@@ -1,0 +1,13 @@
+# Generated from upstream kustomize. Do not edit by hand.
+upstream:
+  file: "api/krusty/transformerplugin_test.go"
+  test: "TestSedTransformer"
+run:
+  path: "."
+  loadRestrictions: rootOnly
+  reorder: none
+  addManagedByLabel: false
+  plugins: enabled
+expect: output
+filesystem: inMemory
+asserted: true

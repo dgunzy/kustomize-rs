@@ -1,0 +1,12 @@
+# Generated from upstream kustomize. Do not edit by hand.
+upstream:
+  file: "api/krusty/diamondcomposition_test.go"
+  test: "TestIssue1251_CompositeDiamond_Failure"
+run:
+  path: "composite"
+  loadRestrictions: rootOnly
+  reorder: none
+  addManagedByLabel: false
+  plugins: disabled
+expect: error
+filesystem: inMemory

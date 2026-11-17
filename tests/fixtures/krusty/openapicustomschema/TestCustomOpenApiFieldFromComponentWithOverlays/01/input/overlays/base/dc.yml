@@ -1,0 +1,21 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: my-dc
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: init
+      containers:
+        - name: container
+          env:
+            - name: foo
+              value: bar
+          volumeMounts:
+            - name: cm
+              mountPath: /opt/cm
+      volumes:
+        - name: cm
+          configMap:
+            name: cm

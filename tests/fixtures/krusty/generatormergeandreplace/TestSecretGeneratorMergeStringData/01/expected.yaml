@@ -1,0 +1,8 @@
+apiVersion: v1
+data:
+  property1: dmFsdWUx
+  property2: dmFsdWUy
+kind: Secret
+metadata:
+  name: test
+type: Opaque

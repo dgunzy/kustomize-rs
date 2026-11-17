@@ -1,0 +1,12 @@
+# Generated from upstream kustomize. Do not edit by hand.
+upstream:
+  file: "api/krusty/component_test.go"
+  test: "TestComponentErrors/components-cannot-be-added-to-resources"
+run:
+  path: "compinres"
+  loadRestrictions: rootOnly
+  reorder: none
+  addManagedByLabel: false
+  plugins: disabled
+expect: error
+filesystem: inMemory

@@ -1,0 +1,1 @@
+the field 'sortOptions.legacySortOptions' is set but the selected sort order is 'fifo', not 'legacy'

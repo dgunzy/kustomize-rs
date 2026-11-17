@@ -1,0 +1,20 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    theConfigMap: cm
+    theNamespace: oldNs
+  name: cm
+  namespace: oldNs
+data:
+  theConfigMap: cm
+  theNamespace: oldNs
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    theConfigMap: cm
+    theNamespace: oldNs
+  name: oldNs

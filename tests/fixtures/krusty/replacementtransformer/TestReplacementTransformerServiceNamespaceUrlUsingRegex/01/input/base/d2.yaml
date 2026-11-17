@@ -1,0 +1,14 @@
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: d2
+spec:
+  template:
+    spec:
+      containers:
+        - image: app1:1.0
+          name: app
+          env:
+            - name: APP1_SERVICE
+              value: "d2.app1"

@@ -1,0 +1,1 @@
+accumulating resources: accumulation err='accumulating resources from '../comp': '/comp' must resolve to a file': expected kind != 'Component' for path '/comp'

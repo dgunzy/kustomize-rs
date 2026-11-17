@@ -1,0 +1,6 @@
+
+apiVersion: someteam.example.com/v1
+kind: SedTransformer
+metadata:
+  name: some-random-name
+argsFromFile: sed-input.txt

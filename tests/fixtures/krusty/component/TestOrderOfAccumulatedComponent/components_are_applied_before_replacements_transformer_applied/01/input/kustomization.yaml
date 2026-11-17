@@ -1,0 +1,19 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- resource.yaml
+components:
+- components
+replacements:
+- source:
+    kind: Pod
+    name: myapp-pod
+    fieldPath: metadata.namespace
+  targets:
+  - select:
+      kind: Pod
+      name: myapp-pod
+    fieldPaths:
+    - spec.containers.[name=myapp-container].env.[name=CURRENT_POD_NAMESPACE].value

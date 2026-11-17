@@ -1,0 +1,15 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namePrefix: base1-
+resources:
+- pod.yaml
+vars:
+- name: POD_NAME
+  objref:
+    apiVersion: v1
+    kind: Pod
+    name: kelley
+  fieldref:
+    fieldpath: metadata.name

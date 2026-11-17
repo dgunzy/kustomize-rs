@@ -1,0 +1,36 @@
+name: Bug report
+description: kustomize-rs builds something differently from kustomize
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you build, what did kustomize produce, and what did kustomize-rs produce instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: input
+    attributes:
+      label: Minimal input
+      description: The smallest kustomization.yaml and resources that reproduce it. Redact anything private.
+      render: yaml
+    validations:
+      required: true
+
+  - type: input
+    id: kustomize-version
+    attributes:
+      label: kustomize version compared against
+      description: Output of `kustomize version` (or the Flux version, if comparing with `flux build`)
+      placeholder: v5.8.0
+    validations:
+      required: false
+
+  - type: input
+    id: krs-version
+    attributes:
+      label: kustomize-rs version or commit
+    validations:
+      required: true

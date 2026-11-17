@@ -1,0 +1,13 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deploy
+spec:
+  template:
+    spec:
+      containers:
+      - image: foobar:1
+        name: replaced-with-digest
+      - image: postgres:1.8.0
+        name: postgresdb

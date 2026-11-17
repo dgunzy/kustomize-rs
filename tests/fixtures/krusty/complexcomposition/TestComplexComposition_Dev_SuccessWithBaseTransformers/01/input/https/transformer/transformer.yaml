@@ -1,0 +1,17 @@
+
+apiVersion: builtin
+kind: PatchTransformer
+metadata:
+  name: svcNameTran
+target: 
+  group: apps
+  version: v1
+  kind: StatefulSet
+  name: my-sts
+patch: |-
+  apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: my-sts
+  spec:
+    serviceName: my-https-svc

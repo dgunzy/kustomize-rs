@@ -1,0 +1,48 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+  # No paths filter on pull_request: "Analyze (rust)" is a required status check
+  # on main, and a workflow skipped by path filtering never reports its checks —
+  # they sit pending forever and the PR can never merge. Docs-only PRs pay ~1min
+  # for a build-mode:none scan. Matches ci.yml, which also filters push only.
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 9 * * 1" # Monday 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (rust)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write # upload results to code scanning
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # CodeQL's Rust extractor runs without compiling the crate, so no
+      # toolchain/build step is needed here (build-mode: none).
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        with:
+          languages: rust
+          build-mode: none
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        with:
+          category: "/language:rust"

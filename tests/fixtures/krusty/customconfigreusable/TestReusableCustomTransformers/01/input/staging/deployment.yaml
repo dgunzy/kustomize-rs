@@ -1,0 +1,14 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myDeployment
+spec:
+  template:
+    metadata:
+      labels:
+        backend: flawless
+    spec:
+      containers:
+      - name: whatever
+        image: whatever

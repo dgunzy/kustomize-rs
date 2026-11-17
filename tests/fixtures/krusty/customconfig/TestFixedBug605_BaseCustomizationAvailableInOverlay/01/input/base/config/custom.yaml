@@ -1,0 +1,19 @@
+
+nameReference:
+- kind: Gorilla
+  fieldSpecs:
+  - group: foo
+    version: v1
+    kind: AnimalPark
+    path: spec/gorillaRef/name
+- kind: Giraffe
+  fieldSpecs:
+  - group: foo
+    version: v1
+    kind: AnimalPark
+    path: spec/giraffeRef/name
+varReference:
+- path: spec/food
+  group: foo
+  version: v1
+  kind: AnimalPark

@@ -1,0 +1,1 @@
+accumulating resources: accumulating resources from 'service.yaml': MalformedYAMLError: yaml: line 9: did not find expected key in File: service.yaml

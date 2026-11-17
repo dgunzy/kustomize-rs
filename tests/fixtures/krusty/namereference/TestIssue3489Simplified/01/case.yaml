@@ -1,0 +1,13 @@
+# Generated from upstream kustomize. Do not edit by hand.
+upstream:
+  file: "api/krusty/namereference_test.go"
+  test: "TestIssue3489Simplified"
+run:
+  path: "."
+  loadRestrictions: rootOnly
+  reorder: none
+  addManagedByLabel: false
+  plugins: disabled
+expect: output
+filesystem: inMemory
+asserted: true

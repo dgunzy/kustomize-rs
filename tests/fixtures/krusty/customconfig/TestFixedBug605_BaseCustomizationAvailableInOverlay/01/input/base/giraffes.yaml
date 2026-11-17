@@ -1,0 +1,16 @@
+
+apiVersion: foo/v1
+kind: Giraffe
+metadata:
+  name: april
+spec:
+  diet: mimosa
+  location: NE
+---
+apiVersion: foo/v1
+kind: Giraffe
+metadata:
+  name: may
+spec:
+  diet: acacia
+  location: SE

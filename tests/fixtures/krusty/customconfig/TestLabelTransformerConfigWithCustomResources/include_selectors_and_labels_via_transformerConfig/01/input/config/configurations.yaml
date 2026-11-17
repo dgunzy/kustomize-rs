@@ -1,0 +1,8 @@
+
+labels:
+  - path: spec/selectors/labels
+    create: true
+    kind: SampleResource
+  - path: spec/template/metadata/labels
+    create: true
+    kind: SampleResource

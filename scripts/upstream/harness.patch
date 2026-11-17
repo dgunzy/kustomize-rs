@@ -1,0 +1,40 @@
+kustomize-rs: patch applied to a kustomize checkout by scripts/import-upstream.sh.
+It modifies api/testutils/kusttest/{harness,hasgett}.go from kustomize
+(https://github.com/kubernetes-sigs/kustomize), Copyright The Kubernetes Authors,
+Apache License 2.0, so each krusty run is passed to record.go. git apply ignores
+these lines before the first diff header.
+
+diff --git a/api/testutils/kusttest/harness.go b/api/testutils/kusttest/harness.go
+index 14543ca..17fb661 100644
+--- a/api/testutils/kusttest/harness.go
++++ b/api/testutils/kusttest/harness.go
+@@ -96,6 +96,7 @@ func (th Harness) MakeOptionsPluginsEnabled() krusty.Options {
+ // Run, failing on error.
+ func (th Harness) Run(path string, o krusty.Options) resmap.ResMap {
+ 	m, err := krusty.MakeKustomizer(&o).Run(th.fSys, path)
++	recordRun(th.t, th.fSys, path, o, m, err)
+ 	if err != nil {
+ 		th.t.Fatal(err)
+ 	}
+@@ -104,7 +105,8 @@ func (th Harness) Run(path string, o krusty.Options) resmap.ResMap {
+ 
+ // Run, failing if there is no error.
+ func (th Harness) RunWithErr(path string, o krusty.Options) error {
+-	_, err := krusty.MakeKustomizer(&o).Run(th.fSys, path)
++	m, err := krusty.MakeKustomizer(&o).Run(th.fSys, path)
++	recordRun(th.t, th.fSys, path, o, m, err)
+ 	if err == nil {
+ 		th.t.Fatalf("expected error")
+ 	}
+diff --git a/api/testutils/kusttest/hasgett.go b/api/testutils/kusttest/hasgett.go
+index 822f99f..5cf8c62 100644
+--- a/api/testutils/kusttest/hasgett.go
++++ b/api/testutils/kusttest/hasgett.go
+@@ -42,6 +42,7 @@ func AssertActualEqualsExpectedWithTweak(
+ 	if tweaker != nil {
+ 		actual = tweaker(actual)
+ 	}
++	recordAssert(t, m, tweaker != nil, expected)
+ 	if string(actual) != expected {
+ 		reportDiffAndFail(t, actual, expected)
+ 	}

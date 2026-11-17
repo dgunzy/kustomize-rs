@@ -1,0 +1,7 @@
+
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: bones-storefront
+spec:
+  mood: Cantankerous

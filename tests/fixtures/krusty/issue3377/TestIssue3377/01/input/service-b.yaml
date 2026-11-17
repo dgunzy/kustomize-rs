@@ -1,0 +1,54 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: service-b
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: service-b
+    spec:
+      containers:
+      - image: repository/service-b:v1
+        imagePullPolicy: Always
+        name: service-b
+        ports:
+        - containerPort: 8080
+        env:
+        - name: REDIRECT_URI
+          value: "http://$(SERVICE_A_DNS_NAME):80/oauth_redir"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-b
+  labels:
+    app.kubernetes.io/component: service-b
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8080
+  selector:
+    app.kubernetes.io/component: service-b
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: service-b
+spec:
+  rules:
+  - host: service-b.k8s.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: service-b
+            port:
+              number: 8080

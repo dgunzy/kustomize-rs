@@ -1,0 +1,1 @@
+accumulating components: loader.New "must build at directory: '/filesincomponents/stub.yaml': file is not directory"

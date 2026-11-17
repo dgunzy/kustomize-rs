@@ -1,0 +1,4 @@
+labels:
+  - path: spec/selectors/labels
+    create: true
+    kind: SampleResource

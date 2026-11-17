@@ -1,0 +1,7 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hoge
+data:
+  configs.yaml: TO_BE_SPECIFIED

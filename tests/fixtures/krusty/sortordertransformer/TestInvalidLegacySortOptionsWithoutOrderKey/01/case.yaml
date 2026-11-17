@@ -1,0 +1,12 @@
+# Generated from upstream kustomize. Do not edit by hand.
+upstream:
+  file: "api/krusty/sortordertransformer_test.go"
+  test: "TestInvalidLegacySortOptionsWithoutOrderKey"
+run:
+  path: "base"
+  loadRestrictions: rootOnly
+  reorder: none
+  addManagedByLabel: false
+  plugins: disabled
+expect: error
+filesystem: inMemory

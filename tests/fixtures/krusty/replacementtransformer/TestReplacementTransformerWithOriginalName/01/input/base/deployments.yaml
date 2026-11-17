@@ -1,0 +1,22 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: target
+spec:
+  template:
+    spec:
+      containers:
+      - image: nginx:oldtag
+        name: nginx
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: source
+spec:
+  template:
+    spec:
+      containers:
+      - image: nginx:newtag
+        name: nginx

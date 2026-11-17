@@ -1,0 +1,16 @@
+
+apiVersion: builtin
+kind: ReplacementTransformer
+metadata:
+  name: buildup
+replacements:
+- source:
+    kind: Pod
+    fieldPath: spec
+  targets:
+  - select:
+      kind: Deployment
+    fieldPaths:
+    - spec.template.spec
+    options:
+      create: true

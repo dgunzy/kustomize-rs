@@ -1,0 +1,13 @@
+
+apiVersion: foo/v1
+kind: AnimalPark
+metadata:
+  name: sandiego
+spec:
+  gorillaRef:
+    name: koko
+  giraffeRef:
+    name: april
+  food:
+  - "$(APRIL_DIET)"
+  - "$(KOKO_DIET)"

@@ -1,0 +1,7 @@
+
+apiVersion: apps/v1
+kind: ConfigMap
+metadata:
+  name: cm1
+data:
+  APP1_SERVICE_PORT: "8080"

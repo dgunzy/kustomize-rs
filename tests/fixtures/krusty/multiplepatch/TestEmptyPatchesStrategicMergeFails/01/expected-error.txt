@@ -1,0 +1,5 @@
+trouble configuring builtin PatchStrategicMergeTransformer with config: `
+paths:
+- empty-patch.yaml
+- comments-patch.yaml
+`: patch appears to be empty; files=[empty-patch.yaml comments-patch.yaml], Patch=

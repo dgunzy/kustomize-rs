@@ -1,0 +1,16 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- resource.yaml
+
+replacements:
+- source:
+    kind: Deployment
+    fieldPath: spec.template.spec.containers.0.image
+  targets:
+  - select:
+      kind: Deployment
+    fieldPaths:
+    - spec.template.spec.containers.1.image

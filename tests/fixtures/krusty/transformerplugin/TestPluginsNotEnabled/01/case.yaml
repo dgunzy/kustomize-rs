@@ -1,0 +1,12 @@
+# Generated from upstream kustomize. Do not edit by hand.
+upstream:
+  file: "api/krusty/transformerplugin_test.go"
+  test: "TestPluginsNotEnabled"
+run:
+  path: "."
+  loadRestrictions: rootOnly
+  reorder: none
+  addManagedByLabel: false
+  plugins: disabled
+expect: error
+filesystem: inMemory

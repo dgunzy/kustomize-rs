@@ -1,0 +1,28 @@
+
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: hello
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: hello
+            image: busybox
+            args:
+            - /bin/sh
+            - -c
+            - date; echo Hello from the Kubernetes cluster
+          restartPolicy: OnFailure
+          volumeMounts:
+          - mountPath: shared-files
+            name: nfs-files-vol
+        volumes:
+        - name: nfs-files-vol
+          nfs:
+            server: $(NFS_SERVER_SERVICE_NAME).default.srv.cluster.local
+            path: /
+            readOnly: false

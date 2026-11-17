@@ -1,0 +1,13 @@
+# Generated from upstream kustomize. Do not edit by hand.
+upstream:
+  file: "api/krusty/sortordertransformer_test.go"
+  test: "TestKustomizationSortOrderNotSet"
+run:
+  path: "base"
+  loadRestrictions: rootOnly
+  reorder: unspecified
+  addManagedByLabel: false
+  plugins: disabled
+expect: output
+filesystem: inMemory
+asserted: true

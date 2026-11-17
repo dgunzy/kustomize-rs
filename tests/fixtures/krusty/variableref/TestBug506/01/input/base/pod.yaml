@@ -1,0 +1,12 @@
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myServerPod
+spec:
+  containers:
+    - name: myServer
+      image: whatever
+      env:
+        - name: POD_NAME
+          value: $(POD_NAME)

@@ -1,0 +1,15 @@
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kelley
+spec:
+  containers:
+  - name: smile
+    image: smile
+    command:
+    - echo
+    - "$(POD_NAME1)"
+    env:
+      - name: FOO
+        value: "$(POD_NAME1)"

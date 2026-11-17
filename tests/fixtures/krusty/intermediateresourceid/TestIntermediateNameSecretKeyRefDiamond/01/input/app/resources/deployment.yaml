@@ -1,0 +1,33 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  template:
+    spec:
+      containers:
+      - name: app
+        image: example.com/app:latest
+        imagePullPolicy: Always
+        env:
+        - name: XQL_ZERO_ARG
+          valueFrom:
+            secretKeyRef:
+              name: $(PROJECT_XQL_ZERO_SECRET_NAME)
+              key: arg
+        - name: XQL_ZERO_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: xql-zero-xql-secret
+              key: password
+        - name: XQL_ONE_ARG
+          valueFrom:
+            secretKeyRef:
+              name: $(PROJECT_XQL_ONE_SECRET_NAME)
+              key: arg
+        - name: XQL_ONE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: xql-one-xql-secret
+              key: password

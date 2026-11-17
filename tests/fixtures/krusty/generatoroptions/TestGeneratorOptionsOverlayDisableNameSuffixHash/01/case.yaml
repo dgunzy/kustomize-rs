@@ -1,0 +1,13 @@
+# Generated from upstream kustomize. Do not edit by hand.
+upstream:
+  file: "api/krusty/generatoroptions_test.go"
+  test: "TestGeneratorOptionsOverlayDisableNameSuffixHash"
+run:
+  path: "overlay"
+  loadRestrictions: rootOnly
+  reorder: none
+  addManagedByLabel: false
+  plugins: disabled
+expect: output
+filesystem: inMemory
+asserted: true

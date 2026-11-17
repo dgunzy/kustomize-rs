@@ -1,0 +1,24 @@
+
+nameReference:
+  - kind: Namespace
+    fieldSpecs:
+      - path: data/theNamespace
+        kind: ConfigMap
+        version: v1
+      - path: metadata/annotations/theNamespace
+        kind: ConfigMap
+        version: v1      
+      - path: metadata/annotations/theNamespace
+        kind: Namespace
+        version: v1
+  - kind: ConfigMap
+    fieldSpecs:
+      - path: data/theConfigMap
+        kind: ConfigMap
+        version: v1
+      - path: metadata/annotations/theConfigMap
+        kind: ConfigMap
+        version: v1   
+      - path: metadata/annotations/theConfigMap
+        kind: Namespace
+        version: v1

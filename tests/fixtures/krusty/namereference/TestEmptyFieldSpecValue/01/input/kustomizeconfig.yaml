@@ -1,0 +1,7 @@
+
+nameReference:
+- kind: Secret
+  version: v1
+  fieldSpecs:
+  - path: data/this_is_a_secret_name
+    kind: ConfigMap

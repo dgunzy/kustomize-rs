@@ -1,0 +1,1 @@
+accumulating components: accumulateDirectory: "recursed accumulation of path '/comp-b': accumulating resources: accumulation err='merging resources from 'proxy.yaml': may not add resource with an already registered id: Deployment.v1.[noGrp]/proxy.[noNs]': must build at directory: '/comp-b/proxy.yaml': file is not directory"

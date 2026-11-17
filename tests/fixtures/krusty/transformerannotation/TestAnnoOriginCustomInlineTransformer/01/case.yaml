@@ -1,0 +1,12 @@
+# Generated from upstream kustomize. Do not edit by hand.
+upstream:
+  file: "api/krusty/transformerannotation_test.go"
+  test: "TestAnnoOriginCustomInlineTransformer"
+run:
+  path: "private/var/folders/1q/psj8yk_n0xl8hzv7rzrzcv8w0000gn/T/kustomize-2022187091"
+  loadRestrictions: rootOnly
+  reorder: none
+  addManagedByLabel: false
+  plugins: enabled
+expect: output
+filesystem: onDisk

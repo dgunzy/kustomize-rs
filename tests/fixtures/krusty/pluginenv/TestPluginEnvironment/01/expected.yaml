@@ -1,0 +1,8 @@
+apiVersion: v1
+env:
+  kustomize_plugin_config_root: /
+  kustomize_plugin_home: /private/tmp/claude-501/-Users-danguns-Kubernetes-flux9s/d22acfab-ff5e-487b-a2f8-8dc52125972f/scratchpad/kustomize/plugin
+  pwd: /
+kind: GeneratedEnv
+metadata:
+  name: hello

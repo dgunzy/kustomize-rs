@@ -1,0 +1,21 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../base
+openapi:
+  path: mycrd_schema.json
+
+patchesStrategicMerge:
+- |-
+  apiVersion: example.com/v1alpha1
+  kind: MyCRD
+  metadata:
+    name: service
+  spec:
+    template:
+      spec:
+        containers:
+        - name: server
+          image: nginx

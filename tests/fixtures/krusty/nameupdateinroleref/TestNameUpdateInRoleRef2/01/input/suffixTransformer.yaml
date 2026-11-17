@@ -1,0 +1,13 @@
+
+apiVersion: builtin
+kind: PrefixSuffixTransformer
+metadata:
+  name: notImportantHere
+suffix: -suffix
+fieldSpecs:
+- path: metadata/name
+  kind: ClusterRole
+  name: myapp
+- path: metadata/name
+  kind: ClusterRoleBinding
+  name: myapp

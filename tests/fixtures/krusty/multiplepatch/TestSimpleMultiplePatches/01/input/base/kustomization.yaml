@@ -1,0 +1,14 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namePrefix: b-
+commonLabels:
+  team: foo
+resources:
+- deployment.yaml
+- service.yaml
+configMapGenerator:
+- name: configmap-in-base
+  literals:
+  - foo=bar

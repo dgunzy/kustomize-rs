@@ -1,0 +1,31 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namePrefix: x-
+commonLabels:
+  app: myApp
+vars:
+- name: APRIL_DIET
+  objref:
+    group: foo
+    version: v1
+    kind: Giraffe
+    name: april
+  fieldref:
+    fieldpath: spec.diet
+- name: KOKO_DIET
+  objref:
+    group: foo
+    version: v1
+    kind: Gorilla
+    name: koko
+  fieldref:
+    fieldpath: spec.diet
+resources:
+- animalPark.yaml
+- giraffes.yaml
+- gorilla.yaml
+configurations:
+- config/defaults.yaml
+- config/custom.yaml

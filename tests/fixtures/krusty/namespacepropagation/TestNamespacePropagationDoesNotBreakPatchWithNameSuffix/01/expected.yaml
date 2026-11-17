@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  configs.yaml: |
+    case_configs:
+      - id: 1
+        name: dummy1
+        client: client1
+kind: ConfigMap
+metadata:
+  name: hoge-schedule_job_1
+  namespace: hoge-dev

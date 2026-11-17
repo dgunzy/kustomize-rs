@@ -1,0 +1,46 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: cockroachdb
+  labels:
+    app: cockroachdb
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+    # Enable automatic monitoring of all instances when Prometheus is running in the cluster.
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "_status/vars"
+    prometheus.io/port: "8080"
+spec:
+  ports:
+  - port: 26257
+    targetPort: 26257
+    name: grpc
+  - port: $(CDB_HTTP_PORT)
+    targetPort: $(CDB_HTTP_PORT)
+    name: http
+  clusterIP: None
+  selector:
+    app: cockroachdb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  # This service is meant to be used by clients of the database. It exposes a ClusterIP that will
+  # automatically load balance connections to the different database pods.
+  name: cockroachdb-public
+  labels:
+    app: cockroachdb
+spec:
+  ports:
+  # The main port, served by gRPC, serves Postgres-flavor SQL, internode
+  # traffic and the cli.
+  - port: 26257
+    targetPort: 26257
+    name: grpc
+  # The secondary port serves the UI as well as health and debug endpoints.
+  - port: $(CDB_HTTP_PORT)
+    targetPort: $(CDB_HTTP_PORT)
+    name: http
+  selector:
+    app: cockroachdb

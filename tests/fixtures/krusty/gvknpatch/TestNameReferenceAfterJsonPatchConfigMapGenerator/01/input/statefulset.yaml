@@ -1,0 +1,24 @@
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: foo
+spec:
+  selector:
+    matchLabels:
+      foo: foo
+  template:
+    metadata:
+      labels:
+        foo: foo
+    spec:
+      containers:
+      - name: foo
+        image: example
+        volumeMounts:
+        - mountPath: /path
+          name: myvol
+      volumes:
+      - configMap:
+          name: cm
+        name: myvol

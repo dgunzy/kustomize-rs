@@ -1,0 +1,1 @@
+accumulating resources: accumulation err='accumulating resources from 'deployment.yaml': '/deployment.yaml' doesn't exist': must build at directory: not a valid directory: '/deployment.yaml' doesn't exist

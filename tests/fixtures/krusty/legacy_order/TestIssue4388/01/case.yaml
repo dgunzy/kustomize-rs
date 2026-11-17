@@ -1,0 +1,13 @@
+# Generated from upstream kustomize. Do not edit by hand.
+upstream:
+  file: "api/krusty/legacy_order_test.go"
+  test: "TestIssue4388"
+run:
+  path: "."
+  loadRestrictions: rootOnly
+  reorder: legacy
+  addManagedByLabel: false
+  plugins: disabled
+expect: output
+filesystem: inMemory
+asserted: true

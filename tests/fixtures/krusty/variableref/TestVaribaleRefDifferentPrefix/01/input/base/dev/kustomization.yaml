@@ -1,0 +1,16 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namePrefix: dev-
+resources:
+- elasticsearch-dev-service.yml
+vars:
+- name: elasticsearch-dev-service-name
+  objref:
+    kind: Service
+    name: elasticsearch
+    apiVersion: v1
+  fieldref:
+    fieldpath: metadata.name
+

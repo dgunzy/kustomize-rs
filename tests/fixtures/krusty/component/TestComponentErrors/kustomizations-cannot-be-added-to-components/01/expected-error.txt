@@ -1,0 +1,1 @@
+accumulating components: accumulateDirectory: "expected kind 'Component' for path '/base' but got 'Kustomization'"

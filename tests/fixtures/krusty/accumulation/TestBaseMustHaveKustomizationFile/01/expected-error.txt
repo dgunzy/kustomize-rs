@@ -1,0 +1,1 @@
+accumulating resources: accumulation err='accumulating resources from 'base': '/base' must resolve to a file': couldn't make target for path '/base': unable to find one of 'kustomization.yaml', 'kustomization.yml' or 'Kustomization' in directory '/base'

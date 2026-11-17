@@ -1,0 +1,20 @@
+
+nameReference:
+- kind: IngressHost
+  fieldSpecs:
+  - path: spec/rules/host
+    kind: Ingress
+  - path: spec/tls/hosts
+    kind: Ingress
+  - path: spec/template/spec/containers/env/value
+    kind: Deployment
+- kind: IngressSecret
+  fieldSpecs:
+  - path: spec/tls/secretName
+    kind: Ingress
+namePrefix:
+- path: metadata/name
+  kind: IngressHost
+- path: metadata/name
+  kind: IngressSecret
+

@@ -1,0 +1,59 @@
+[package]
+name = "kustomize-rs"
+version = "0.0.1"
+edition = "2024"
+# Floor comes from the dependency graph (serde-saphyr requires 1.89).
+rust-version = "1.89"
+authors = ["Dan Guns <danbguns@gmail.com>"]
+description = "A Rust implementation of the kustomize build engine, scoped to what Flux uses"
+license = "Apache-2.0"
+repository = "https://github.com/dgunzy/kustomize-rs"
+keywords = ["kubernetes", "kustomize", "flux", "gitops", "yaml"]
+categories = ["development-tools", "parser-implementations"]
+# Not published until the build covers Flux's common cases (see SPEC.md).
+publish = false
+# The recorded upstream cases (~8 MB) and import tooling stay in the repo only.
+# LICENSE and NOTICE ship in the package.
+exclude = ["tests/fixtures/", "conformance/", "scripts/", ".github/", ".claude/"]
+
+[lib]
+name = "kustomize"
+
+[features]
+default = []
+# The `kustomize-rs` binary: a thin `build` command over the library.
+cli = ["dep:clap"]
+
+[[bin]]
+name = "kustomize-rs"
+path = "src/bin/kustomize-rs.rs"
+required-features = ["cli"]
+
+# The upstream conformance suite. `test = false` keeps it out of `cargo test`:
+# most cases fail until their features land, so it is a progress report, not a
+# gate. Run it with `just conformance` (or `cargo test --test conformance`).
+[[test]]
+name = "conformance"
+path = "tests/conformance/main.rs"
+harness = false
+test = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+serde-saphyr = { version = "2.1", default-features = false, features = ["serialize", "deserialize"] }
+thiserror = "2.0"
+clap = { version = "4.6", features = ["derive"], optional = true }
+
+[dev-dependencies]
+similar = { version = "2.7", default-features = false, features = ["text"] }
+
+[lints.rust]
+missing_docs = "warn"
+
+[lints.clippy]
+# Panic safety: a library embedded in a long-running UI must not abort on bad
+# input. Tests are exempt via clippy.toml (allow-*-in-tests).
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

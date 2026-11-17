@@ -1,0 +1,31 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  labels:
+    app.kubernetes.io/component: nginx
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: nginx
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.15.7-alpine
+        ports:
+        - name: http
+          containerPort: 80
+        volumeMounts:
+          - mountPath: shared-files
+            name: nfs-files-vol
+      volumes:
+        - name: nfs-files-vol
+          nfs:
+            server: $(NFS_SERVER_SERVICE_NAME).default.srv.cluster.local
+            path: /
+            readOnly: false

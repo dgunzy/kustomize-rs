@@ -1,0 +1,17 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      containers:
+      - image: CONTROLLER_IMAGE
+        name: manager
+        args:
+        - --emit-audit-events
+        - --operation=audit
+        - --operation=status
+        - --logtostderr

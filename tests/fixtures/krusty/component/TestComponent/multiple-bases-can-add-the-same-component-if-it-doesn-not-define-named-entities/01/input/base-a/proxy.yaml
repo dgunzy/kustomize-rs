@@ -1,0 +1,7 @@
+
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: proxy-a
+spec:
+  type: Logical

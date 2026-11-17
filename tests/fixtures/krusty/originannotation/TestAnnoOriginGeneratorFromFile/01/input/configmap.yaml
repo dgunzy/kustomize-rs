@@ -1,0 +1,10 @@
+
+apiVersion: builtin
+kind: ConfigMapGenerator
+metadata:
+  name: notImportantHere
+name: bob
+literals:
+- fruit=Indian Gooseberry
+- year=2020
+- crisis=true

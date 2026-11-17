@@ -1,0 +1,25 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namePrefix: staging-
+commonLabels:
+  env: staging
+  team: override-foo
+patchesStrategicMerge:
+- deployment.yaml
+resources:
+- ../app
+configMapGenerator:
+- name: configmap-in-overlay
+  literals:
+  - hello=world
+- name: configmap-in-base
+  behavior: replace
+  literals:
+  - foo=override-bar
+secretGenerator:
+- name: secret-in-base
+  behavior: merge
+  literals:
+  - proxy=haproxy

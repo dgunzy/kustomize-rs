@@ -1,0 +1,17 @@
+
+nameReference:
+  - kind: ConfigMap
+    version: v1
+    fieldSpecs:
+      - kind: CronWorkflow
+        version: v1alpha1
+        path: spec/workflowSpec/arguments/parameters/value
+varReference:
+  - path: spec/workflowSpec/arguments/parameters/value
+    kind: CronWorkflow
+    group: argoproj.io
+    version: v1alpha1
+  - path: spec
+    kind: CronWorkflow
+    group: argoproj.io
+    version: v1alpha1

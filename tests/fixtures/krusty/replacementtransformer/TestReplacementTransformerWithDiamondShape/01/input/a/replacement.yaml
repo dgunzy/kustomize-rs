@@ -1,0 +1,9 @@
+
+source:
+  name: a-sourceA
+  fieldPath: spec.template.spec.containers.0.image
+targets:
+- select:
+    name: a-deploy
+  fieldPaths:
+  - spec.template.spec.containers.[name=nginx].image

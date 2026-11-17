@@ -1,0 +1,22 @@
+
+apiVersion: builtin
+kind: PatchTransformer
+metadata:
+  name: tolTrans
+target: 
+  group: apps
+  version: v1
+  kind: StatefulSet
+  name: my-sts
+patch: |-
+  apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: my-sts
+  spec:
+    template:
+      spec:
+        tolerations:
+        - effect: NoExecute
+          key: node.kubernetes.io/not-ready
+          tolerationSeconds: 30

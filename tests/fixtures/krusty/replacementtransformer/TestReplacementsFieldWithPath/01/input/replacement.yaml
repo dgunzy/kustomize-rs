@@ -1,0 +1,9 @@
+
+source: 
+  kind: Deployment
+  fieldPath: spec.template.spec.containers.0.image
+targets:
+- select:
+    kind: Deployment
+  fieldPaths: 
+  - spec.template.spec.containers.1.image

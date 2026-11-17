@@ -1,0 +1,13 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- secret.yaml
+secretGenerator:
+- name: test
+  behavior: merge
+  literals:
+  - property2=value2
+  options:
+    disableNameSuffixHash: false

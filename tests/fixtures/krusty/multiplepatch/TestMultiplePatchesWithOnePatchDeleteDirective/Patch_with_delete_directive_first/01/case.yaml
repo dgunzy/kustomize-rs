@@ -1,0 +1,13 @@
+# Generated from upstream kustomize. Do not edit by hand.
+upstream:
+  file: "api/krusty/multiplepatch_test.go"
+  test: "TestMultiplePatchesWithOnePatchDeleteDirective/Patch_with_delete_directive_first"
+run:
+  path: "overlay/staging"
+  loadRestrictions: rootOnly
+  reorder: none
+  addManagedByLabel: false
+  plugins: disabled
+expect: output
+filesystem: inMemory
+asserted: true

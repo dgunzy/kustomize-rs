@@ -1,0 +1,8 @@
+apiVersion: v1
+data:
+  BASE_LAYER_ENV: base
+  OVERLAY_ENV: overlay
+kind: ConfigMap
+metadata:
+  name: general-environment-826bch2dh9
+  namespace: abc

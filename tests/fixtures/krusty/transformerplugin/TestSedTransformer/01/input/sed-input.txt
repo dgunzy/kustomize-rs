@@ -1,0 +1,3 @@
+
+s/$FOO/foo/g
+s/$BAR/bar/g

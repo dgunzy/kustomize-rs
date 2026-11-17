@@ -1,0 +1,19 @@
+name: Feature request
+description: A kustomize feature you need, or an improvement
+labels: [feature]
+body:
+  - type: textarea
+    id: feature
+    attributes:
+      label: Which kustomize feature?
+      description: The kustomization field or behavior (for example `replacements`, remote bases). Check SPEC.md section 4 and conformance/STATUS.md for where it stands.
+    validations:
+      required: true
+
+  - type: textarea
+    id: use
+    attributes:
+      label: How do you use it?
+      description: A short example, and whether it comes from a Flux Kustomization.
+    validations:
+      required: false
